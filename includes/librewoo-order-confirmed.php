@@ -104,7 +104,11 @@ class WooOrderComplete
                 "authorization"
             );
 
-            $libresign_endpoint->triggerAPI();
+            $test = $libresign_endpoint->triggerAPI();
+
+            echo $test;
+            die();
+            
         }
       
     }
