@@ -96,18 +96,14 @@ class WooOrderComplete
         $is_validated = $this->librewoo_trigger_log($email,  $display_name , $quota);
 
         if ($is_validated) {
-            $libresign_endpoint = new LibreSignEndpoint(
-                "groupid",
-                $display_name,
-                $quota ,
-                "apps",
-                "authorization"
-            );
+           $endpoint =   new LibreSignEndpoint();
 
-            $test = $libresign_endpoint->triggerAPI();
+           $endpoint->test();
 
-            echo $test;
-         
+
+
+           
+            
             
         }
       

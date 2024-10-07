@@ -1,6 +1,23 @@
 <?php
 
 
+class LibreSignEndpoint
+{
+    function __construct()
+    {
+        add_action("init", 'test');
+      
+    }
+
+    public function test(){
+        echo "Hello World";
+    }
+
+   
+
+}
+
+
 
 
 /* 
