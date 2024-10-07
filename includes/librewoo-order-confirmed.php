@@ -4,6 +4,8 @@ if (!defined("ABSPATH")) {
     exit();
 }
 
+include LW_PLUGIN_DIR . "includes/librewoo-api-endpoint.php";
+
 /**
  * Class WooOrderComplete
  *
