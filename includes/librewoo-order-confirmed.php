@@ -107,7 +107,7 @@ class WooOrderComplete
             $test = $libresign_endpoint->triggerAPI();
 
             echo $test;
-            die();
+         
             
         }
       
