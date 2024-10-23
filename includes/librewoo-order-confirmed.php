@@ -100,6 +100,8 @@ class WooOrderComplete
 
            $endpoint->test();
 
+           // <========================
+
 
 
            
