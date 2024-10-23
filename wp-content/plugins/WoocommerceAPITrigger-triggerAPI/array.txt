@@ -1,0 +1,30 @@
+Array
+(
+    [id] => 238
+    [order_id] => 279
+    [name] => Pro
+    [product_id] => 61
+    [variation_id] => 0
+    [quantity] => 1
+    [tax_class] => 
+    [subtotal] => 1000
+    [subtotal_tax] => 0
+    [total] => 1000
+    [total_tax] => 0
+    [taxes] => Array
+        (
+            [total] => Array
+                (
+                )
+
+            [subtotal] => Array
+                (
+                )
+
+        )
+
+    [meta_data] => Array
+        (
+        )
+
+)
