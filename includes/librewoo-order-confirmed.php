@@ -1,15 +1,10 @@
 <?php
-// You shall not pass!
-if (!defined("ABSPATH")) {
-    exit();
-}
+defined( 'ABSPATH' ) || exit;
 
 /**
  * Class WooOrderComplete
- *
- * Triggers LibreSign API when an order is completed
- *
- *
+ * 
+ * 
  * @since 1.0.0
  */
 
@@ -17,129 +12,58 @@ class WooOrderComplete
 {
     public function __construct()
     {
-        add_action("woocommerce_order_status_processing", [
-            $this,
-            "order_complete_message",
-        ]);
+        add_action('woocommerce_order_status_processing', [$this, 'order_complete_message']);
     }
 
     public function order_complete_message($order_id)
     {
-        // Ensure the order ID is valid
-        $order_id = absint($order_id);
-
-        if (!$order_id) {
-            return;
-        }
-        if (!is_numeric($order_id)) {
+        $order = wc_get_order($order_id);
+        if (!$order) {
             return;
         }
 
-        /**
-         * Get order data from WooCommerce order object
-         * Data: customer name, customer email, purchased items
-         *
-         */
-        $this->get_order_data(wc_get_order($order_id));
-
-        $this->librewoo_trigger($this->get_order_data(wc_get_order($order_id)));
+        $data = $this->get_order_data($order);
+        wp_remote_post(
+            NEXTCLOUD_API_HOST . '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
+            [
+                'body' => get_object_vars($data),
+                'headers' => [
+                    'Authorization' => 'Basic ' . base64_encode( NEXTCLOUD_API_LOGIN . ':' . NEXTCLOUD_API_PASSWORD )
+                ]
+            ]
+        );
     }
 
     /**
      * Get order data from WooCommerce order object
      * Data: customer name, customer email, purchased items
-     *
+     * 
      * @param WC_Order $order
      * @return stdClass
      * @since 1.0.0
      */
-    private function get_order_data($order_id)
+    private function get_order_data($order): stdClass
     {
-        $order = $order_id;
+        $items = $order->get_items();
+        $item = current($items);
+        $product = wc_get_product($item->get_product_id());
+        $attributes = $product->get_attributes();
 
-        $woo_client_info = new stdClass();
-        $woo_client_info->customer_name = $order->get_billing_first_name();
-        $woo_client_info->customer_last_name = $order->get_billing_last_name();
-        $woo_client_info->customer_email = $order->get_billing_email();
-        // Retrieve purchased items
-        $woo_client_info->purchased_items = [];
-        /// Loop through each order item
-        foreach ($order->get_items() as $item_id => $item) {
-            $woo_client_info->purchased_items[] = [
-                "id" => $item->get_id(), // Product ID
-                "name" => $item->get_name(), // Product name
-                "quantity" => $item->get_quantity(), // Quantity ordered
-                "total" => wc_price($item->get_total()), // Total price (formatted with currency symbol)
-            ];
-        }
-
-        return $woo_client_info;
-    }
-
-    /**
-     * Trigger LibreSign API
-     * @return void
-     * @since 1.0.0
-     */
-    private function librewoo_trigger($order_data)
-    {
-        //Convert stdClass to array
-        $order_data = get_object_vars($order_data);
-        $email = $order_data["customer_email"];
-        $display_name =
-            $order_data["customer_name"] .
-            " " .
-            $order_data["customer_last_name"];
-        $quota = $order_data["purchased_items"][0]["name"];
-        $is_validated = $this->librewoo_trigger_log($email,  $display_name , $quota);
-
-        if ($is_validated) {
-            $libresign_endpoint = new LibreSignEndpoint(
-                "groupid",
-                $display_name,
-                $quota ,
-                "apps",
-                "authorization"
-            );
-
-            $libresign_endpoint->triggerAPI();
-        }
-      
-    }
-
-    function librewoo_trigger_log($email, $name, $quota)
-    {
-        // Validate email, name and quota
-        $email ? $email : false;
-        $name ? $name : false;
-        $quota ? $quota : false;
-
-        // Logs
-        if ($email && $name && $quota) {
-           
-            error_log(
-                sprintf(
-                    "LibreSign: Name: %s Email: %s Quota: %s",
-                    $name,
-                    $email,
-                    $quota
-                )
-            );
-            return true;
-        } else {
-            $variables = [
-                "name" => $name,
-                "email" => $email,
-                "quota" => $quota,
-            ];
-            foreach ($variables as $key => $value) {
-                if (!$value) {
-                    error_log(sprintf("LibreSign: Missing %s", $key));
-                }
+        $data = new stdClass();
+        $data->groupid = $order->get_billing_email();
+        $data->displayname = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
+        foreach ($attributes as $name => $attribute) {
+            preg_match('/^nextcloud-(?<name>.+)/', $name, $matches);
+            if (!$matches) {
+                continue;
             }
-            return false;
+            $options = $attribute->get_options();
+            if (count($options) === 1) {
+                $data->{$matches['name']} = current($options);
+                continue;
+            }
+            $data->{$matches['name']} = $options;
         }
-
-        // TRIGGER LibreSign API HERE
+        return $data;
     }
 }

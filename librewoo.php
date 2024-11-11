@@ -1,21 +1,30 @@
 <?php
 /**
- * Plugin Name: Woo Order Complete Message
- * Description: Prints "Woo Completed" message when an order is completed and restricts cart to one product.
- * Version: 1.0.1
- * Author: Libre Code
- * Author URI: https://librecode.coop
+ * Woo Order Complete Messagec
+ *
+ * @package   wp-simple-smtp
+ * @author    Vitor Mattos <vitor@php.rio>
+ * @license   GPL-2.0+
+ * @link      http://github.com/vitormattos
+ * @copyright 2021 Vitor Mattos
+ *
+ * @wordpress-plugin
+ * Plugin Name:       Woo Order Complete Messagec
+ * Plugin URI:        https://github.com/LibreSign/WoocommerceAPITrigger
+ * Description:       Woo Order Complete Messagec
+ * Version:           1.0.1
+ * Author:            Vitor Mattos
+ * Author URI:        https://github.com/LibreSign
+ * Text Domain:       wp-simple-smtp
+ * License:           GPL-2.0+
+ * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
+ * GitHub Plugin URI: https://github.com/LibreSign/WoocommerceAPITrigger
  */
 
-// Exit if accessed directly
-if (!defined('ABSPATH')) {
-    exit;
-}
+defined( 'ABSPATH' ) || exit;
 
-define('LW_PLUGIN_DIR', plugin_dir_path(__FILE__));
-
-include LW_PLUGIN_DIR . 'includes/librewoo-order-confirmed.php';
-include LW_PLUGIN_DIR . 'includes/librewoo-add-to-cart-validation.php';
+include __DIR__ . '/includes/librewoo-order-confirmed.php';
+include __DIR__ . '/includes/librewoo-add-to-cart-validation.php';
 
 new WooOneProductCart();
 new WooOrderComplete();
