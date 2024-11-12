@@ -1,17 +1,6 @@
 <?php 
-// Prevent direct file access
-if ( ! defined( 'ABSPATH' ) ) {
-    exit; // Exit if accessed directly
-}
+defined( 'ABSPATH' ) || exit;
 
-/*
-    * Class WooOneProductCart
-    * Limits only one product in the cart
-    * 
-    * @since 1.0.0
-    *
-    */
-    
 class WooOneProductCart {
     
     public function __construct() {
@@ -30,14 +19,9 @@ class WooOneProductCart {
 
         // If there's more than one product in the cart, empty it
         if (WC()->cart->get_cart_contents_count() > 0) {
-            $this->empty_cart();
+            wc_empty_cart();
         }
 
         return $passed;
-    }
-
-    private function empty_cart() {
-        // Empty the WooCommerce cart
-        wc_empty_cart();
     }
 }
