@@ -23,11 +23,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-include __DIR__ . '/includes/librewoo-order-confirmed.php';
-include __DIR__ . '/includes/librewoo-add-to-cart-validation.php';
+include __DIR__ . '/includes/agm-order-confirmed.php';
+include __DIR__ . '/includes/agm-add-to-cart-validation.php';
 
-new WooOneProductCart();
-new WooOrderComplete();
+new AgmOrderConfirmed();
+new AgmAddToCartValidation();
 
 
 

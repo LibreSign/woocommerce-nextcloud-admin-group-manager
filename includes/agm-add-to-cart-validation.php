@@ -1,7 +1,7 @@
 <?php 
 defined( 'ABSPATH' ) || exit;
 
-class WooOneProductCart {
+class AgmAddToCartValidation {
     
     public function __construct() {
         // Hook into WooCommerce add to cart validation
