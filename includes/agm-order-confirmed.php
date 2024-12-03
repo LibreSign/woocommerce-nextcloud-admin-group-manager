@@ -1,14 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-/**
- * Class WooOrderComplete
- * 
- * 
- * @since 1.0.0
- */
-
-class WooOrderComplete
+class AgmOrderConfirmed
 {
     public function __construct()
     {
