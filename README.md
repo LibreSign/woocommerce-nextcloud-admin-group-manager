@@ -30,11 +30,12 @@ scenario:
     And Edit the product that you want to integrate to Nextcloud
     And Click at "Attributes"
     And Click at "Add new"
-    And Fill "nexrtcloud-string-quota" at field "Name:"
+    And Fill "nextcloud-string-quota" at field "Name:"
     # The size here need to be the same of other visible attribute that will be displayed to user
     And Fill "1Gb" at field "Value(s):"
     And Uncheck the field "Visible on the product page"
-    And Fill "nexrtcloud-list-apps" at field "Name:"
+    And Click at "Add new"
+    And Fill "nextcloud-list-apps" at field "Name:"
     And Fill "libresign|deck" at field "Value(s):"
     And Uncheck the field "Visible on the product page"
     Then Click at "Save attributes"
