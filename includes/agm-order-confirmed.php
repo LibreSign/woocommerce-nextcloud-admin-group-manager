@@ -46,16 +46,19 @@ class AgmOrderConfirmed
         $data->groupid = $order->get_billing_email();
         $data->displayname = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
         foreach ($attributes as $name => $attribute) {
-            preg_match('/^nextcloud-(?<name>.+)/', $name, $matches);
+            preg_match('/^nextcloud-(?<type>string|list)-(?<name>.+)/', $name, $matches);
             if (!$matches) {
                 continue;
             }
             $options = $attribute->get_options();
-            if (count($options) === 1) {
-                $data->{$matches['name']} = current($options);
-                continue;
+            switch ($matches['type']) {
+                case 'string':
+                    $data->{$matches['name']} = current($options);
+                    break;
+                case 'list':
+                    $data->{$matches['name']} = $options;
+                    break;
             }
-            $data->{$matches['name']} = $options;
         }
         return $data;
     }
