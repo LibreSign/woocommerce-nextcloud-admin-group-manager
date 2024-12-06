@@ -16,7 +16,7 @@ class AgmOrderConfirmed
         }
 
         $data = $this->get_order_data($order);
-        wp_remote_post(
+        $return = wp_remote_post(
             NEXTCLOUD_API_HOST . '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
             [
                 'body' => get_object_vars($data),
@@ -25,6 +25,10 @@ class AgmOrderConfirmed
                 ]
             ]
         );
+        if ($return['response']['code'] === 200) {
+            $order->set_status( 'completed', '', true );
+            $order->save();
+        }
     }
 
     /**
