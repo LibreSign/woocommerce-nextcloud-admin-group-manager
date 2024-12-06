@@ -47,8 +47,8 @@ class AgmStatusProcessing
         $attributes = $product->get_attributes();
 
         $data = new stdClass();
-        $data->groupid = $order->get_billing_email();
-        $data->email = $order->get_billing_email();
+        $data->groupid = $order->get_user()->user_login;
+        $data->email = $order->get_user()->user_login;
         $data->displayname = $order->get_billing_first_name() . ' ' . $order->get_billing_last_name();
         foreach ($attributes as $name => $attribute) {
             preg_match('/^nextcloud-(?<type>string|list)-(?<name>.+)/', $name, $matches);
