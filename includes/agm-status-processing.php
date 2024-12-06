@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmOrderConfirmed
+class AgmStatusProcessing
 {
     public function __construct()
     {

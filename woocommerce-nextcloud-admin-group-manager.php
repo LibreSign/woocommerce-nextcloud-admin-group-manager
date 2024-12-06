@@ -23,12 +23,12 @@
 
 defined( 'ABSPATH' ) || exit;
 
-include __DIR__ . '/includes/agm-order-confirmed.php';
+include __DIR__ . '/includes/agm-status-processing.php';
 include __DIR__ . '/includes/agm-add-to-cart-validation.php';
 include __DIR__ . '/includes/agm-user-id-equal-to-email.php';
 include __DIR__ . '/includes/agm-update-email.php';
 
-new AgmOrderConfirmed();
+new AgmStatusProcessing();
 new AgmAddToCartValidation();
 new AgmUserIdEqualToEmail();
 new AgmUpdateEmail();
