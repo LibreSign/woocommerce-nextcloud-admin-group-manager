@@ -17,11 +17,11 @@ class AgmStatusProcessing
 
         $data = $this->get_order_data($order);
         $return = wp_remote_post(
-            NEXTCLOUD_API_HOST . '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
+            get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
             [
                 'body' => get_object_vars($data),
                 'headers' => [
-                    'Authorization' => 'Basic ' . base64_encode( NEXTCLOUD_API_LOGIN . ':' . NEXTCLOUD_API_PASSWORD )
+                    'Authorization' => 'Basic ' . base64_encode( get_option('nextcloud_api_login') . ':' . get_option('nextcloud_api_password') )
                 ]
             ]
         );

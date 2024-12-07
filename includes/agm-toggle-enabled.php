@@ -16,14 +16,14 @@ class AgmToggleEnabled
     protected function enable(string $userId, int $enabled)
     {
         wp_remote_post(
-            NEXTCLOUD_API_HOST . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled',
+            get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled',
             [
                 'body' => [
                     'groupid' => $userId,
                     'enabled' => $enabled,
                 ],
                 'headers' => [
-                    'Authorization' => 'Basic ' . base64_encode( NEXTCLOUD_API_LOGIN . ':' . NEXTCLOUD_API_PASSWORD )
+                    'Authorization' => 'Basic ' . base64_encode( get_option('nextcloud_api_login') . ':' . get_option('nextcloud_api_password') )
                 ]
             ]
         );
