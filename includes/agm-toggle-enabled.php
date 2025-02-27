@@ -5,16 +5,16 @@ class AgmToggleEnabled
 {
     public function disable($order_id)
     {
+        $this->enable($order_id, 0);
+    }
+
+    protected function enable(int $order_id, int $enabled = 1)
+    {
         $order = wc_get_order($order_id);
         if (!$order) {
             return;
         }
         $userId = $order->get_user()->user_login;
-        $this->enable($userId, 0);
-    }
-
-    protected function enable(string $userId, int $enabled)
-    {
         wp_remote_post(
             get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled',
             [
