@@ -16,10 +16,15 @@ class AgmSubscriptionUpdated extends AgmToggleEnabled
             $order_ids = $subscription->get_related_orders();
             foreach ($order_ids as $order_id) {
                 parent::disable($order_id);
-                // Check if will be possible cancel the order. Maybe don't will be possible cancell the entire order because have costs that can't be refundable.
-                // $order = wc_get_order($order_id);
-                // $order->set_status( 'canceled', '', true );
-                // $order->save();
+                /**
+                 * @todo Check if is necessary to cancel the order after cancel the subscruption.
+                 *
+                 * To consider:
+                 *
+                 * Maybe don't will be possible cancel the entire order because have costs that can't be refundable. 
+                 * Considering this will be necessary make a way to discount the termination fine before change the
+                 * status of order to canceled.
+                 */
             }
             return;
         }
