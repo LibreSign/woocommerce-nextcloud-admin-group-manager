@@ -25,7 +25,7 @@ class AgmStatusProcessing
                 ]
             ]
         );
-        if ($return['response']['code'] === 200) {
+        if (is_array($return) && $return['response']['code'] === 200) {
             $order->set_status( 'completed', '', true );
             $order->save();
         }
