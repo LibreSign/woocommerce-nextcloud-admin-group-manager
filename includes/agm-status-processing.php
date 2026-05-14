@@ -20,9 +20,7 @@ class AgmStatusProcessing
             get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
             [
                 'body' => get_object_vars($data),
-                'headers' => [
-                    'Authorization' => 'Basic ' . base64_encode( get_option('nextcloud_api_login') . ':' . get_option('nextcloud_api_password') )
-                ]
+                'headers' => agm_nextcloud_request_headers(),
             ]
         );
         if (is_array($return) && $return['response']['code'] === 200) {

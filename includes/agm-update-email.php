@@ -18,9 +18,7 @@ class AgmUpdateEmail
                     'userId' => $user->user_login,
                     'email' => $user->user_email,
                 ],
-                'headers' => [
-                    'Authorization' => 'Basic ' . base64_encode( get_option('nextcloud_api_login') . ':' . get_option('nextcloud_api_password') )
-                ]
+                'headers' => agm_nextcloud_request_headers(),
             ]
         );
     }

@@ -22,9 +22,7 @@ class AgmToggleEnabled
                     'groupid' => $userId,
                     'enabled' => $enabled,
                 ],
-                'headers' => [
-                    'Authorization' => 'Basic ' . base64_encode( get_option('nextcloud_api_login') . ':' . get_option('nextcloud_api_password') )
-                ]
+                'headers' => agm_nextcloud_request_headers(),
             ]
         );
     }
