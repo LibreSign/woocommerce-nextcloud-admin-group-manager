@@ -86,7 +86,7 @@ class AgmStatusProcessing
 
         $payload = get_object_vars($data);
         $attempt = $this->increment_attempts($order);
-        $this->set_sync_status($order, self::SYNC_STATUS_PENDING);
+        $this->set_sync_status($order, self::SYNC_STATUS_PENDING, '', $data);
 
         $return = wp_remote_post(
             get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
@@ -100,7 +100,7 @@ class AgmStatusProcessing
         $this->log_response($order_id, $payload, $return, $attempt);
 
         if ($this->request_succeeded($return)) {
-            $this->mark_sync_success($order, $manual);
+            $this->mark_sync_success($order, $manual, $data);
             $order->set_status( 'completed', '', true );
             $order->save();
             return;
@@ -108,7 +108,7 @@ class AgmStatusProcessing
 
         $message = $this->build_failure_message($return);
         $schedule_retry = $attempt < self::MAX_ATTEMPTS;
-        $this->mark_sync_failure($order, $message, $manual, $schedule_retry);
+        $this->mark_sync_failure($order, $message, $manual, $schedule_retry, $data);
         if ($schedule_retry) {
             $this->schedule_retry($order_id, $attempt);
         } else {
@@ -215,10 +215,16 @@ class AgmStatusProcessing
         return $attempts;
     }
 
-    private function set_sync_status(WC_Order $order, string $status): void
+    private function set_sync_status(WC_Order $order, string $status, string $message = '', ?stdClass $data = null): void
     {
         $order->update_meta_data(self::SYNC_META_STATUS, $status);
+        if ('' !== $message) {
+            $order->update_meta_data(self::SYNC_META_LAST_ERROR, $message);
+        } elseif ('success' === $status) {
+            $order->delete_meta_data(self::SYNC_META_LAST_ERROR);
+        }
         $order->save();
+        $this->update_customer_sync_summary($order, $status, $message, $data);
     }
 
     private function get_sync_status(WC_Order $order): string
@@ -226,11 +232,12 @@ class AgmStatusProcessing
         return (string)$order->get_meta(self::SYNC_META_STATUS, true);
     }
 
-    private function mark_sync_success(WC_Order $order, bool $manual): void
+    private function mark_sync_success(WC_Order $order, bool $manual, ?stdClass $data = null): void
     {
         $order->update_meta_data(self::SYNC_META_STATUS, self::SYNC_STATUS_SUCCESS);
         $order->delete_meta_data(self::SYNC_META_LAST_ERROR);
         $order->save();
+        $this->update_customer_sync_summary($order, self::SYNC_STATUS_SUCCESS, '', $data);
         $this->clear_retry_schedule($order->get_id());
         $order->add_order_note(
             $manual
@@ -239,11 +246,12 @@ class AgmStatusProcessing
         );
     }
 
-    private function mark_sync_failure(WC_Order $order, string $message, bool $manual, bool $scheduled_retry): void
+    private function mark_sync_failure(WC_Order $order, string $message, bool $manual, bool $scheduled_retry, ?stdClass $data = null): void
     {
         $order->update_meta_data(self::SYNC_META_STATUS, self::SYNC_STATUS_FAILED);
         $order->update_meta_data(self::SYNC_META_LAST_ERROR, $message);
         $order->save();
+        $this->update_customer_sync_summary($order, self::SYNC_STATUS_FAILED, $message, $data);
 
         $note = $manual
             ? 'Manual Nextcloud sync failed: '
@@ -253,6 +261,35 @@ class AgmStatusProcessing
             $note .= ' A retry was scheduled automatically.';
         }
         $order->add_order_note($note);
+    }
+
+    private function update_customer_sync_summary(WC_Order $order, string $status, string $message = '', ?stdClass $data = null): void
+    {
+        $user_id = (int) $order->get_user_id();
+        if ($user_id <= 0) {
+            return;
+        }
+
+        $identity = $data ? $data : $this->get_order_data_for_user_meta( $order );
+
+        if ( $identity ) {
+            update_user_meta( $user_id, '_agm_nextcloud_account_groupid', (string) ( $identity->groupid ?? '' ) );
+            update_user_meta( $user_id, '_agm_nextcloud_account_email', (string) ( $identity->email ?? '' ) );
+        }
+
+        update_user_meta( $user_id, '_agm_nextcloud_account_status', $status );
+        update_user_meta( $user_id, '_agm_nextcloud_account_last_message', $message );
+        update_user_meta( $user_id, '_agm_nextcloud_account_last_order_id', $order->get_id() );
+        update_user_meta( $user_id, '_agm_nextcloud_account_updated_at', time() );
+    }
+
+    private function get_order_data_for_user_meta( WC_Order $order ): ?stdClass
+    {
+        try {
+            return $this->get_order_data( $order );
+        } catch ( RuntimeException $exception ) {
+            return null;
+        }
     }
 
     private function schedule_retry(int $order_id, int $attempt): void
