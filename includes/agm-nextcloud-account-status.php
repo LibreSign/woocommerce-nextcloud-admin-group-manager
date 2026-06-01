@@ -1,70 +1,15 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-function agm_register_nextcloud_status_endpoint(): void {
-    add_rewrite_endpoint( AgmNextcloudAccountStatus::ACCOUNT_ENDPOINT, EP_ROOT | EP_PAGES );
-}
-
 class AgmNextcloudAccountStatus
 {
-    public const ACCOUNT_ENDPOINT = 'nextcloud-status';
-
     private const ORDER_META_STATUS = '_agm_nextcloud_sync_status';
     private const ORDER_META_ATTEMPTS = '_agm_nextcloud_sync_attempts';
     private const ORDER_META_LAST_ERROR = '_agm_nextcloud_sync_last_error';
 
-    private const USER_META_STATUS = '_agm_nextcloud_account_status';
-    private const USER_META_MESSAGE = '_agm_nextcloud_account_last_message';
-    private const USER_META_ORDER_ID = '_agm_nextcloud_account_last_order_id';
-    private const USER_META_UPDATED_AT = '_agm_nextcloud_account_updated_at';
-    private const USER_META_GROUP_ID = '_agm_nextcloud_account_groupid';
-    private const USER_META_EMAIL = '_agm_nextcloud_account_email';
-
     public function __construct()
     {
-        add_action( 'init', 'agm_register_nextcloud_status_endpoint' );
-        add_filter( 'woocommerce_account_menu_items', [ $this, 'add_account_menu_item' ] );
-        add_action( 'woocommerce_account_' . self::ACCOUNT_ENDPOINT . '_endpoint', [ $this, 'render_account_endpoint' ] );
         add_action( 'woocommerce_admin_order_data_after_order_details', [ $this, 'render_admin_section' ], 10, 1 );
-    }
-
-    public function add_account_menu_item( array $items ): array
-    {
-        if ( ! is_user_logged_in() ) {
-            return $items;
-        }
-
-        $menu_items = [];
-        $inserted = false;
-
-        foreach ( $items as $key => $label ) {
-            $menu_items[ $key ] = $label;
-            if ( 'dashboard' === $key ) {
-                $menu_items[ self::ACCOUNT_ENDPOINT ] = 'Status do Nextcloud';
-                $inserted = true;
-            }
-        }
-
-        if ( ! $inserted ) {
-            $menu_items[ self::ACCOUNT_ENDPOINT ] = 'Status do Nextcloud';
-        }
-
-        return $menu_items;
-    }
-
-    public function render_account_endpoint(): void
-    {
-        if ( ! is_user_logged_in() ) {
-            echo '<p>Faça login para ver o status da sua conta no Nextcloud.</p>';
-            return;
-        }
-
-        $summary = $this->get_current_user_summary( get_current_user_id() );
-
-        echo '<div class="woocommerce-MyAccount-content">';
-        echo '<h2>Status do Nextcloud</h2>';
-        echo $this->render_summary_box( $summary, true ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-        echo '</div>';
     }
 
     public function render_admin_section( $order = null ): void
@@ -81,7 +26,7 @@ class AgmNextcloudAccountStatus
 
         echo '<div class="order_data_column" style="clear: both; width: 100%;">';
         echo '<h3>Status do Nextcloud</h3>';
-        echo $this->render_summary_box( $summary, false ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo $this->render_summary_box( $summary ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo '<p class="description">Se o status estiver com falha, use a ação do pedido <strong>Retry Nextcloud sync</strong> para reenviar o provisionamento.</p>';
         echo '</div>';
     }
@@ -100,40 +45,6 @@ class AgmNextcloudAccountStatus
         }
 
         return null;
-    }
-
-    private function get_current_user_summary( int $user_id ): array
-    {
-        $summary = $this->build_empty_summary();
-
-        foreach ( [
-            self::USER_META_STATUS,
-            self::USER_META_MESSAGE,
-            self::USER_META_ORDER_ID,
-            self::USER_META_UPDATED_AT,
-            self::USER_META_GROUP_ID,
-            self::USER_META_EMAIL,
-        ] as $key ) {
-            $summary['user_meta'][ $key ] = get_user_meta( $user_id, $key, true );
-        }
-
-        if ( '' !== (string) $summary['user_meta'][ self::USER_META_STATUS ] || (int) $summary['user_meta'][ self::USER_META_ORDER_ID ] > 0 ) {
-            $summary['status'] = (string) $summary['user_meta'][ self::USER_META_STATUS ];
-            $summary['message'] = (string) $summary['user_meta'][ self::USER_META_MESSAGE ];
-            $summary['order_id'] = (int) $summary['user_meta'][ self::USER_META_ORDER_ID ];
-            $summary['updated_at'] = (int) $summary['user_meta'][ self::USER_META_UPDATED_AT ];
-            $summary['groupid'] = (string) $summary['user_meta'][ self::USER_META_GROUP_ID ];
-            $summary['email'] = (string) $summary['user_meta'][ self::USER_META_EMAIL ];
-
-            return $summary;
-        }
-
-        $order = $this->find_latest_order_with_sync_data( $user_id );
-        if ( $order instanceof WC_Order ) {
-            return $this->build_summary_from_order( $order );
-        }
-
-        return $summary;
     }
 
     private function find_latest_order_with_sync_data( int $user_id )
@@ -218,7 +129,6 @@ class AgmNextcloudAccountStatus
             'groupid' => $data['groupid'],
             'email' => $data['email'],
             'displayname' => $user instanceof WP_User ? $user->display_name : '',
-            'user_meta' => [],
         ];
     }
 
@@ -269,7 +179,7 @@ class AgmNextcloudAccountStatus
         }
     }
 
-    private function render_summary_box( array $summary, bool $is_account_page ): string
+    private function render_summary_box( array $summary ): string
     {
         $parts = [];
         $parts[] = '<div class="notice notice-' . esc_attr( $this->get_notice_class( $summary['status'] ) ) . ' inline" style="margin: 12px 0; padding: 12px;">';
@@ -298,14 +208,6 @@ class AgmNextcloudAccountStatus
         $message = (string) ( $summary['message'] ?: $this->get_status_message( $summary['status'] ) );
         if ( '' !== $message ) {
             $parts[] = '<p><strong>Detalhe:</strong> ' . esc_html( $message ) . '</p>';
-        }
-
-        if ( 'failed' === $summary['status'] && $is_account_page ) {
-            $parts[] = '<p>Se a conta ainda não foi criada, entre em contato com o suporte ou aguarde uma nova tentativa de sincronização.</p>';
-        }
-
-        if ( 'unknown' === $summary['status'] && $is_account_page ) {
-            $parts[] = '<p>Ainda não encontramos um pedido com provisionamento no Nextcloud para esta conta.</p>';
         }
 
         $parts[] = '</div>';
@@ -341,20 +243,4 @@ class AgmNextcloudAccountStatus
         }
     }
 
-    private function build_empty_summary(): array
-    {
-        return [
-            'status' => 'unknown',
-            'label' => $this->get_status_label( 'unknown' ),
-            'message' => '',
-            'order_id' => 0,
-            'order_status' => '',
-            'attempts' => 0,
-            'updated_at' => 0,
-            'groupid' => '',
-            'email' => '',
-            'displayname' => '',
-            'user_meta' => [],
-        ];
-    }
 }
