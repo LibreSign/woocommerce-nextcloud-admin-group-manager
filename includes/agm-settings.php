@@ -106,7 +106,9 @@ function agm_test_nextcloud_connection(): array {
         ];
     }
 
-    if ($ocs_status_code !== 100) {
+    $ocs_status = (string) ($body['ocs']['meta']['status'] ?? '');
+
+    if ($ocs_status !== 'ok' || $ocs_status_code < 100 || $ocs_status_code >= 300) {
         return [
             'type' => 'error',
             'message' => 'A API OCS respondeu com status inesperado (' . $ocs_status_code . '). Verifique credenciais e permissões do usuário informado.',
