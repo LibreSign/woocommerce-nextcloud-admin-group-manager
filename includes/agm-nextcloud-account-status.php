@@ -25,7 +25,7 @@ class AgmNextcloudAccountStatus
         $summary = $this->build_summary_from_order( $order );
 
         echo '<div class="order_data_column" style="clear: both; width: 100%;">';
-        echo '<h3>Status do Nextcloud</h3>';
+        echo '<h3>Status da conta no Nextcloud</h3>';
         echo $this->render_summary_box( $summary ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         echo '<p class="description">Se o status estiver com falha, use a ação do pedido <strong>Retry Nextcloud sync</strong> para reenviar o provisionamento.</p>';
         echo '</div>';
@@ -168,14 +168,14 @@ class AgmNextcloudAccountStatus
     {
         switch ( $status ) {
             case 'success':
-                return 'Criada';
+                return 'Conta criada no Nextcloud';
             case 'pending':
-                return 'Provisionando';
+                return 'Provisionamento em andamento';
             case 'failed':
-                return 'Falhou';
+                return 'Falha na sincronização';
             case 'unknown':
             default:
-                return 'Ainda não provisionada';
+                return 'Aguardando provisionamento';
         }
     }
 
@@ -237,7 +237,7 @@ class AgmNextcloudAccountStatus
             case 'pending':
                 return 'Provisionamento em andamento.';
             case 'failed':
-                return 'O provisionamento no Nextcloud falhou.';
+                return 'A sincronização com o Nextcloud falhou.';
             default:
                 return '';
         }
