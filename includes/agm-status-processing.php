@@ -45,12 +45,7 @@ class AgmStatusProcessing
             return;
         }
 
-        if ($this->get_sync_status($order) === self::SYNC_STATUS_SUCCESS) {
-            $this->clear_retry_schedule($order->get_id());
-            return;
-        }
-
-        $this->sync_order($order);
+        $this->sync_current_state($order);
     }
 
     public function manual_retry($order)
@@ -60,13 +55,61 @@ class AgmStatusProcessing
         }
 
         $this->clear_retry_schedule($order->get_id());
-        $this->sync_order($order, true);
+        $this->sync_current_state($order, true);
     }
 
     public function register_order_action($actions)
     {
         $actions['agm_retry_nextcloud_sync'] = 'Retry Nextcloud sync';
         return $actions;
+    }
+
+    private function sync_current_state(WC_Order $order, bool $manual = false): void
+    {
+        if ($this->should_disable_for_order($order)) {
+            $this->sync_disable($order, $manual);
+            return;
+        }
+
+        $this->sync_order($order, $manual);
+    }
+
+    private function should_disable_for_order(WC_Order $order): bool
+    {
+        return in_array($order->get_status(), ['on-hold', 'cancelled', 'failed', 'refunded'], true);
+    }
+
+    private function sync_disable(WC_Order $order, bool $manual = false): void
+    {
+        $order_id = $order->get_id();
+
+        try {
+            $data = $this->get_order_data($order);
+        } catch (RuntimeException $exception) {
+            $this->mark_sync_failure($order, $exception->getMessage(), $manual, false);
+            $this->log('Unable to build Nextcloud payload for disable sync', [
+                'order_id' => $order_id,
+                'error' => $exception->getMessage(),
+            ]);
+            return;
+        }
+
+        $this->set_sync_status($order, self::SYNC_STATUS_PENDING, '', $data);
+
+        $this->log('Disabling Nextcloud account because order is not active', [
+            'order_id' => $order_id,
+            'order_status' => $order->get_status(),
+            'groupid' => $data->groupid ?? null,
+        ]);
+
+        (new AgmToggleEnabled())->disable($order_id);
+
+        $this->mark_sync_success($order, $manual, $data);
+        $order->add_order_note(
+            $manual
+                ? 'Nextcloud account disabled successfully after manual retry.'
+                : 'Nextcloud account disabled because the order is no longer active.'
+        );
     }
 
     private function sync_order(WC_Order $order, bool $manual = false): void
