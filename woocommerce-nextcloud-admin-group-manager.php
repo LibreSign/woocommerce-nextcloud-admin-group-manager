@@ -2,7 +2,7 @@
 /**
  * WooCommerce Nextcloud Admin Group Manager
  *
- * @package   wp-simple-smtp
+ * @package   wp-nextcloud-admin-group-manager
  * @author    LibreCode <contact@librecode.coop>
  * @license   GPL-2.0+
  * @link      http://github.com/vitormattos
@@ -15,7 +15,7 @@
  * Version:           1.0.1
  * Author:            LibreCode
  * Author URI:        https://github.com/LibreSign
- * Text Domain:       wp-simple-smtp
+ * Text Domain:       wp-nextcloud-admin-group-manager
  * License:           GPL-2.0+
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * GitHub Plugin URI: https://github.com/LibreSign/woocommerce-nextcloud-admin-group-manager
