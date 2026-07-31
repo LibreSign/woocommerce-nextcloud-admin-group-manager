@@ -53,7 +53,3 @@ new AgmSubscriptionUpdated();
 new AgmAddToCartValidation();
 new AgmUserIdEqualToEmail();
 new AgmUpdateEmail();
-
-register_deactivation_hook( __FILE__, function () {
-	flush_rewrite_rules();
-} );
