@@ -55,7 +55,6 @@ new AgmUserIdEqualToEmail();
 new AgmUpdateEmail();
 
 register_activation_hook( __FILE__, function () {
-	agm_register_nextcloud_status_endpoint();
 	flush_rewrite_rules();
 } );
 
