@@ -38,7 +38,6 @@ include __DIR__ . '/includes/agm-toggle-enabled.php';
 include __DIR__ . '/includes/agm-status-canceled.php';
 include __DIR__ . '/includes/agm-status-failed.php';
 include __DIR__ . '/includes/agm-status-processing.php';
-include __DIR__ . '/includes/agm-nextcloud-account-status.php';
 include __DIR__ . '/includes/agm-subscription-updated.php';
 include __DIR__ . '/includes/agm-add-to-cart-validation.php';
 include __DIR__ . '/includes/agm-user-id-equal-to-email.php';
@@ -48,17 +47,7 @@ include __DIR__ . '/includes/agm-settings.php';
 new AgmStatusCanceled();
 new AgmStatusFailed();
 new AgmStatusProcessing();
-new AgmNextcloudAccountStatus();
 new AgmSubscriptionUpdated();
 new AgmAddToCartValidation();
 new AgmUserIdEqualToEmail();
 new AgmUpdateEmail();
-
-register_activation_hook( __FILE__, function () {
-	agm_register_nextcloud_status_endpoint();
-	flush_rewrite_rules();
-} );
-
-register_deactivation_hook( __FILE__, function () {
-	flush_rewrite_rules();
-} );
