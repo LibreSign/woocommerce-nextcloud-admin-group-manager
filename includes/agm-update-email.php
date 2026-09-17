@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmUpdateEmail
+class Agm_UpdateEmail
 {
     public function __construct()
     {

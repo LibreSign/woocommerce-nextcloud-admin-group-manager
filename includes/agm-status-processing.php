@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmStatusProcessing
+class Agm_StatusProcessing
 {
     private const SYNC_META_STATUS = '_agm_nextcloud_sync_status';
     private const SYNC_META_ATTEMPTS = '_agm_nextcloud_sync_attempts';
@@ -102,7 +102,7 @@ class AgmStatusProcessing
             'groupid' => $data->groupid ?? null,
         ]);
 
-        (new AgmToggleEnabled())->disable($order_id);
+        (new Agm_ToggleEnabled())->disable($order_id);
 
         $this->mark_sync_success($order, $manual);
         $order->add_order_note(

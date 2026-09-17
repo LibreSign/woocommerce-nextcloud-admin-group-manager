@@ -1,10 +1,10 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-$a = __FILE__;
-$basename = plugin_basename($a);
-$plugin_domain = explode( '/', $basename )[0];
-add_filter('plugin_action_links_' . $plugin_domain . '/' . $plugin_domain .'.php', 'agm_add_settings_link');
+add_filter(
+    'plugin_action_links_' . plugin_basename( dirname( __DIR__ ) . '/woocommerce-nextcloud-admin-group-manager.php' ),
+    'agm_add_settings_link'
+);
 
 function agm_add_settings_link($links) {
     $settings_link = '<a href="options-general.php?page=nextcloud-config">Configurações</a>';
@@ -12,7 +12,7 @@ function agm_add_settings_link($links) {
     return $links;
 }
 
-function nextcloud_config_page() {
+function agm_nextcloud_config_page() {
     ?>
     <div class="wrap">
         <h1>Configurações Nextcloud</h1>
@@ -42,17 +42,17 @@ function nextcloud_config_page() {
     <?php
 }
 
-function nexcloud_admin_group_manager_menu() {
+function agm_admin_group_manager_menu() {
     add_options_page(
         'Configurações Nextcloud',
         'Nextcloud Config',
         'manage_options',
         'nextcloud-config',
-        'nextcloud_config_page'
+        'agm_nextcloud_config_page'
     );
 }
 
-add_action('admin_menu', 'nexcloud_admin_group_manager_menu');
+add_action('admin_menu', 'agm_admin_group_manager_menu');
 
 function agm_admin_settings() {
     register_setting('nextcloud_options_group', 'nextcloud_api_host');

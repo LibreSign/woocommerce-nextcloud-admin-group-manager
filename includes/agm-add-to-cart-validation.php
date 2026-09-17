@@ -1,7 +1,7 @@
 <?php 
 defined( 'ABSPATH' ) || exit;
 
-class AgmAddToCartValidation {
+class Agm_AddToCartValidation {
     
     public function __construct() {
         // Hook into WooCommerce add to cart validation
