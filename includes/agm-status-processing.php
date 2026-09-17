@@ -341,10 +341,6 @@ class Agm_StatusProcessing
 
     private function log(string $message, array $context = []): void
     {
-        if (function_exists('wc_get_logger')) {
-            wc_get_logger()->info($message . ' ' . wp_json_encode($context), ['source' => 'nextcloud-admin-group-manager']);
-            return;
-        }
-        error_log('[nextcloud-admin-group-manager] ' . $message . ' ' . wp_json_encode($context));
+        wc_get_logger()->info($message . ' ' . wp_json_encode($context), ['source' => 'nextcloud-admin-group-manager']);
     }
 }

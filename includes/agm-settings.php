@@ -126,6 +126,7 @@ function agm_maybe_test_nextcloud_connection_after_save() {
         return;
     }
 
+    // phpcs:disable WordPress.Security.NonceVerification.Recommended
     if (!isset($_GET['page'], $_GET['settings-updated'])) {
         return;
     }
@@ -133,6 +134,7 @@ function agm_maybe_test_nextcloud_connection_after_save() {
     if ($_GET['page'] !== 'nextcloud-config' || $_GET['settings-updated'] !== 'true') {
         return;
     }
+    // phpcs:enable WordPress.Security.NonceVerification.Recommended
 
     $result = agm_test_nextcloud_connection();
     add_settings_error(
