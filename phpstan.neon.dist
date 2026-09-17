@@ -8,3 +8,5 @@ parameters:
         - includes
     bootstrapFiles:
         - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+    scanFiles:
+        - stubs/woocommerce-subscriptions.php

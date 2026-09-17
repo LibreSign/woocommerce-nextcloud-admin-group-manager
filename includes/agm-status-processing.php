@@ -171,7 +171,7 @@ class Agm_StatusProcessing
     {
         $items = $order->get_items();
         $item = current($items);
-        if (!$item) {
+        if (!$item instanceof WC_Order_Item_Product) {
             throw new RuntimeException('Order has no items');
         }
 
@@ -253,7 +253,7 @@ class Agm_StatusProcessing
     {
         $attempts = (int)$order->get_meta(self::SYNC_META_ATTEMPTS, true);
         $attempts++;
-        $order->update_meta_data(self::SYNC_META_ATTEMPTS, $attempts);
+        $order->update_meta_data(self::SYNC_META_ATTEMPTS, (string) $attempts);
         $order->save();
         return $attempts;
     }

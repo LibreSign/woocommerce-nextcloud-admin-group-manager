@@ -94,8 +94,8 @@ function agm_test_nextcloud_connection(): array {
         ];
     }
 
-    $status_code = (int) ($response['response']['code'] ?? 0);
-    $body = json_decode((string) ($response['body'] ?? ''), true);
+    $status_code = (int) $response['response']['code'];
+    $body = json_decode((string) $response['body'], true);
     $ocs_status_code = (int) ($body['ocs']['meta']['statuscode'] ?? 0);
     $user_id = (string) ($body['ocs']['data']['id'] ?? '');
 
