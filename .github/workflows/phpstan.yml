@@ -1,4 +1,4 @@
-name: Static analysis
+name: PHPStan
 
 on:
   push:
@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  static-analysis:
-    name: Static analysis (PHP ${{ matrix.php }})
+  phpstan:
+    name: PHPStan (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

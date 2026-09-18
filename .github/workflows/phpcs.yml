@@ -1,4 +1,4 @@
-name: Coding standards
+name: PHPCS
 
 on:
   push:
@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  coding-standards:
-    name: Coding standards (PHP ${{ matrix.php }})
+  phpcs:
+    name: PHPCS (PHP ${{ matrix.php }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
