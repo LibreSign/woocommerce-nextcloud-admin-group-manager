@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmStatusCanceled extends AgmToggleEnabled
+class Agm_StatusCanceled extends Agm_ToggleEnabled
 {
     public function __construct()
     {

@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmStatusProcessing
+class Agm_StatusProcessing
 {
     private const SYNC_META_STATUS = '_agm_nextcloud_sync_status';
     private const SYNC_META_ATTEMPTS = '_agm_nextcloud_sync_attempts';
@@ -102,7 +102,7 @@ class AgmStatusProcessing
             'groupid' => $data->groupid ?? null,
         ]);
 
-        (new AgmToggleEnabled())->disable($order_id);
+        (new Agm_ToggleEnabled())->disable($order_id);
 
         $this->mark_sync_success($order, $manual);
         $order->add_order_note(
@@ -171,8 +171,8 @@ class AgmStatusProcessing
     {
         $items = $order->get_items();
         $item = current($items);
-        if (!$item) {
-            throw new RuntimeException('Order has no items');
+        if (!$item instanceof WC_Order_Item_Product) {
+            throw new RuntimeException('Order has no product items');
         }
 
         $product = wc_get_product($item->get_product_id());
@@ -253,7 +253,7 @@ class AgmStatusProcessing
     {
         $attempts = (int)$order->get_meta(self::SYNC_META_ATTEMPTS, true);
         $attempts++;
-        $order->update_meta_data(self::SYNC_META_ATTEMPTS, $attempts);
+        $order->update_meta_data(self::SYNC_META_ATTEMPTS, (string) $attempts);
         $order->save();
         return $attempts;
     }
@@ -341,10 +341,6 @@ class AgmStatusProcessing
 
     private function log(string $message, array $context = []): void
     {
-        if (function_exists('wc_get_logger')) {
-            wc_get_logger()->info($message . ' ' . wp_json_encode($context), ['source' => 'nextcloud-admin-group-manager']);
-            return;
-        }
-        error_log('[nextcloud-admin-group-manager] ' . $message . ' ' . wp_json_encode($context));
+        wc_get_logger()->info($message . ' ' . wp_json_encode($context), ['source' => 'nextcloud-admin-group-manager']);
     }
 }

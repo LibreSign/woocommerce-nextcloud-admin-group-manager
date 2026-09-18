@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmToggleEnabled
+class Agm_ToggleEnabled
 {
     public function disable($order_id)
     {

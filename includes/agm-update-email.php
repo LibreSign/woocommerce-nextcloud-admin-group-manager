@@ -1,26 +1,25 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmUpdateEmail
+class Agm_UpdateEmail
 {
+    /** @var array<int, string> */
+    private array $queued_passwords = [];
+
     public function __construct()
     {
-        add_action( 'profile_update', [ $this, 'sync_account_details' ], 10, 3 );
+        add_action( 'profile_update', [ $this, 'sync_nextcloud_email' ] );
+        add_action( 'wp_set_password', [ $this, 'queue_nextcloud_password' ], 10, 3 );
+        add_action( 'shutdown', [ $this, 'sync_queued_passwords' ] );
     }
 
-    public function sync_account_details( $user_id )
+    public function sync_nextcloud_email( $user_id ): void
     {
         $user = get_userdata( $user_id );
         if ( ! $user ) {
             return;
         }
 
-        $this->sync_nextcloud_email( $user );
-        $this->sync_nextcloud_password( $user );
-    }
-
-    private function sync_nextcloud_email( WP_User $user ): void
-    {
         wp_remote_post(
             get_option( 'nextcloud_api_host' ) . '/ocs/v2.php/apps/admin_group_manager/api/v1/change-admin-email',
             [
@@ -33,44 +32,43 @@ class AgmUpdateEmail
         );
     }
 
-    private function sync_nextcloud_password( WP_User $user ): void
+    public function queue_nextcloud_password( $password, $user_id, $old_user_data = null ): void
     {
-        $password = $this->get_password_from_request();
+        $password = (string) $password;
         if ( '' === $password ) {
             return;
         }
 
-        wp_remote_request(
-            $this->build_nextcloud_user_url( $user->user_login ),
-            [
-                'method'  => 'PUT',
-                'body'    => [
-                    'key'   => 'password',
-                    'value' => $password,
-                ],
-                'headers' => agm_nextcloud_request_headers(),
-            ]
-        );
+        if ( $old_user_data instanceof WP_User && wp_check_password( $password, $old_user_data->user_pass ) ) {
+            return;
+        }
+
+        $this->queued_passwords[ (int) $user_id ] = $password;
     }
 
-    private function get_password_from_request(): string
+    public function sync_queued_passwords(): void
     {
-        $password_1 = '';
-        $password_2 = '';
+        $queued = $this->queued_passwords;
+        $this->queued_passwords = [];
 
-        if ( isset( $_POST['pass1'] ) || isset( $_POST['pass2'] ) ) {
-            $password_1 = isset( $_POST['pass1'] ) ? (string) wp_unslash( $_POST['pass1'] ) : '';
-            $password_2 = isset( $_POST['pass2'] ) ? (string) wp_unslash( $_POST['pass2'] ) : '';
-        } elseif ( isset( $_POST['password_1'] ) || isset( $_POST['password_2'] ) ) {
-            $password_1 = isset( $_POST['password_1'] ) ? (string) wp_unslash( $_POST['password_1'] ) : '';
-            $password_2 = isset( $_POST['password_2'] ) ? (string) wp_unslash( $_POST['password_2'] ) : '';
+        foreach ( $queued as $user_id => $password ) {
+            $user = get_userdata( $user_id );
+            if ( ! $user || ! wp_check_password( $password, $user->user_pass ) ) {
+                continue;
+            }
+
+            wp_remote_request(
+                $this->build_nextcloud_user_url( $user->user_login ),
+                [
+                    'method'  => 'PUT',
+                    'body'    => [
+                        'key'   => 'password',
+                        'value' => $password,
+                    ],
+                    'headers' => agm_nextcloud_request_headers(),
+                ]
+            );
         }
-
-        if ( '' === $password_1 || $password_1 !== $password_2 ) {
-            return '';
-        }
-
-        return $password_1;
     }
 
     private function build_nextcloud_user_url( string $user_login ): string

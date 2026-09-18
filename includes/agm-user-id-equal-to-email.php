@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmUserIdEqualToEmail
+class Agm_UserIdEqualToEmail
 {
     public function __construct()
     {
