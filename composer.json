@@ -17,9 +17,10 @@
                 "name": "pronamic/woocommerce-subscriptions",
                 "version": "9.2.0",
                 "type": "wordpress-plugin",
-                "dist": {
-                    "type": "zip",
-                    "url": "https://github.com/pronamic/woocommerce-subscriptions/archive/refs/tags/v9.2.0.zip"
+                "source": {
+                    "type": "git",
+                    "url": "https://github.com/pronamic/woocommerce-subscriptions.git",
+                    "reference": "0a2c496cd263811707caa37c8bf01ffa450c6009"
                 }
             }
         }
