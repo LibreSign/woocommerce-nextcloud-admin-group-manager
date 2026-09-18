@@ -66,8 +66,25 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 		$this->assertSame( array(), $this->nextcloud->urls() );
 	}
 
-	public function test_leaves_nextcloud_alone_when_the_order_has_no_customer() {
-		do_action( 'woocommerce_order_status_cancelled', $this->orders->order()->get_id() );
+	public function test_disables_the_guest_account_under_the_billing_email_it_was_created_with() {
+		$order = $this->orders->order( array( 'billing' => array( 'email' => 'guest@example.org' ) ) );
+
+		do_action( 'woocommerce_order_status_cancelled', $order->get_id() );
+
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->urls() );
+		$this->assertSame(
+			array(
+				'groupid' => 'guest@example.org',
+				'enabled' => 0,
+			),
+			$this->nextcloud->args()['body']
+		);
+	}
+
+	public function test_leaves_nextcloud_alone_when_the_order_names_nobody() {
+		$order = $this->orders->order( array( 'billing' => array( 'email' => '' ) ) );
+
+		do_action( 'woocommerce_order_status_cancelled', $order->get_id() );
 
 		$this->assertSame( array(), $this->nextcloud->urls() );
 	}
