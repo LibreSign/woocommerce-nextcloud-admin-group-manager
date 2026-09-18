@@ -50,6 +50,12 @@ tests_add_filter(
 	'setup_theme',
 	static function () {
 		WC_Install::install();
+	}
+);
+
+tests_add_filter(
+	'action_scheduler_init',
+	static function () {
 		WC_Subscriptions_Plugin::instance()->activate_plugin();
 	}
 );
