@@ -1,12 +1,18 @@
 includes:
     - vendor/szepeviktor/phpstan-wordpress/extension.neon
+    - vendor/phpstan/phpstan-phpunit/extension.neon
+    - vendor/phpstan/phpstan-phpunit/rules.neon
 
 parameters:
     level: 5
     paths:
         - woocommerce-nextcloud-admin-group-manager.php
         - includes
+        - tests
     bootstrapFiles:
         - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
     scanFiles:
+        - stubs/action-scheduler.php
         - stubs/woocommerce-subscriptions.php
+    scanDirectories:
+        - vendor/wp-phpunit/wp-phpunit/includes
