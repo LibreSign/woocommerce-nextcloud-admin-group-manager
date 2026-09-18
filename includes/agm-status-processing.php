@@ -172,7 +172,7 @@ class Agm_StatusProcessing
         $items = $order->get_items();
         $item = current($items);
         if (!$item instanceof WC_Order_Item_Product) {
-            throw new RuntimeException('Order has no items');
+            throw new RuntimeException('Order has no product items');
         }
 
         $product = wc_get_product($item->get_product_id());
