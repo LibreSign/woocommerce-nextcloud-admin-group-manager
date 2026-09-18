@@ -63,12 +63,16 @@ tests_add_filter(
 tests_add_filter(
 	'pre_http_request',
 	static function ( $preempt, $args, $url ) {
+		if ( false !== $preempt ) {
+			return $preempt;
+		}
+
 		return new WP_Error(
 			'agm_tests_http_blocked',
 			sprintf( 'Unexpected HTTP request to %s. Stub it with the pre_http_request filter.', $url )
 		);
 	},
-	10,
+	PHP_INT_MAX,
 	3
 );
 
