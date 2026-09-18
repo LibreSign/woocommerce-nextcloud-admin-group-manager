@@ -14,7 +14,11 @@ class Agm_ToggleEnabled
         if (!$order) {
             return;
         }
-        $userId = $order->get_user()->user_login;
+        $user = $order->get_user();
+        if (!$user) {
+            return;
+        }
+        $userId = $user->user_login;
         wp_remote_post(
             get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled',
             [
