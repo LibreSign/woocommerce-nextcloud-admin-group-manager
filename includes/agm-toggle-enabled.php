@@ -15,15 +15,15 @@ class Agm_ToggleEnabled
             return;
         }
         $user = $order->get_user();
-        if (!$user) {
+        $groupid = $user ? $user->user_login : $order->get_billing_email();
+        if (!$groupid) {
             return;
         }
-        $userId = $user->user_login;
         wp_remote_post(
             get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled',
             [
                 'body' => [
-                    'groupid' => $userId,
+                    'groupid' => $groupid,
                     'enabled' => $enabled,
                 ],
                 'headers' => agm_nextcloud_request_headers(),
