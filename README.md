@@ -32,3 +32,53 @@ scenario:
     And Uncheck the field "Visible on the product page"
     Then Click at "Save attributes"
 ```
+
+## Development
+
+Every check is a Composer script:
+
+```bash
+composer lint  # php -l on every file
+composer cs    # PHPCS
+composer stan  # PHPStan
+composer test  # PHPUnit
+composer ci    # all of the above, in this order
+```
+
+### Tests
+
+`composer install` brings in WordPress itself (`vendor/wordpress`), the
+WordPress test suite, WooCommerce and WooCommerce Subscriptions
+(`vendor/test-plugins`), so the only thing the tests need from outside is a
+MySQL/MariaDB server and a database they are allowed to wipe on every run.
+
+| Variable | Default |
+|---|---|
+| `WP_TESTS_DB_NAME` | `wordpress_test` |
+| `WP_TESTS_DB_USER` | `root` |
+| `WP_TESTS_DB_PASSWORD` | `root` |
+| `WP_TESTS_DB_HOST` | `mariadb` |
+| `WP_TESTS_TABLE_PREFIX` | `wptests_` |
+| `WP_CORE_DIR` | `vendor/wordpress` |
+
+The defaults are the ones of the local SaaS stack, where both the database and
+Composer already live inside the containers:
+
+```bash
+docker exec wordpress-docker-mariadb-1 \
+  mariadb -uroot -proot -e 'CREATE DATABASE IF NOT EXISTS wordpress_test;'
+
+docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-group-manager \
+  wordpress-docker-wordpress-1 composer test
+```
+
+`tests/Integration/` mirrors the plugin files with `Test.php` appended:
+`includes/agm-status-processing.php` is covered by
+`tests/Integration/Includes/StatusProcessingTest.php`. Every test goes through
+the hook WooCommerce fires in production, against real orders, products,
+subscriptions and users.
+
+Nothing is mocked. Outgoing HTTP is answered through the `pre_http_request`
+filter (`tests/Support/FakeHttp.php`), which is WordPress' own extension point,
+and any request that is not answered that way fails the test instead of
+reaching the network.
