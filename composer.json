@@ -28,7 +28,7 @@
         "lint": "parallel-lint --exclude vendor .",
         "cs": "phpcs",
         "cs:fix": "phpcbf",
-        "stan": "phpstan analyse",
+        "stan": "phpstan analyse --memory-limit=1G",
         "ci": [
             "@lint",
             "@cs",
