@@ -3,10 +3,14 @@ defined( 'ABSPATH' ) || exit;
 
 class Agm_UpdateEmail
 {
+    /** @var array<int, string> */
+    private array $queued_passwords = [];
+
     public function __construct()
     {
         add_action( 'profile_update', [ $this, 'sync_nextcloud_email' ] );
-        add_action( 'wp_set_password', [ $this, 'sync_nextcloud_password' ], 10, 2 );
+        add_action( 'wp_set_password', [ $this, 'queue_nextcloud_password' ], 10, 3 );
+        add_action( 'shutdown', [ $this, 'sync_queued_passwords' ] );
     }
 
     public function sync_nextcloud_email( $user_id ): void
@@ -28,24 +32,43 @@ class Agm_UpdateEmail
         );
     }
 
-    public function sync_nextcloud_password( $password, $user_id ): void
+    public function queue_nextcloud_password( $password, $user_id, $old_user_data = null ): void
     {
-        $user = get_userdata( $user_id );
-        if ( ! $user || '' === (string) $password ) {
+        $password = (string) $password;
+        if ( '' === $password ) {
             return;
         }
 
-        wp_remote_request(
-            $this->build_nextcloud_user_url( $user->user_login ),
-            [
-                'method'  => 'PUT',
-                'body'    => [
-                    'key'   => 'password',
-                    'value' => $password,
-                ],
-                'headers' => agm_nextcloud_request_headers(),
-            ]
-        );
+        if ( $old_user_data instanceof WP_User && wp_check_password( $password, $old_user_data->user_pass ) ) {
+            return;
+        }
+
+        $this->queued_passwords[ (int) $user_id ] = $password;
+    }
+
+    public function sync_queued_passwords(): void
+    {
+        $queued = $this->queued_passwords;
+        $this->queued_passwords = [];
+
+        foreach ( $queued as $user_id => $password ) {
+            $user = get_userdata( $user_id );
+            if ( ! $user || ! wp_check_password( $password, $user->user_pass ) ) {
+                continue;
+            }
+
+            wp_remote_request(
+                $this->build_nextcloud_user_url( $user->user_login ),
+                [
+                    'method'  => 'PUT',
+                    'body'    => [
+                        'key'   => 'password',
+                        'value' => $password,
+                    ],
+                    'headers' => agm_nextcloud_request_headers(),
+                ]
+            );
+        }
     }
 
     private function build_nextcloud_user_url( string $user_login ): string
