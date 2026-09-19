@@ -4,6 +4,7 @@
 
     <file>.</file>
     <exclude-pattern>/vendor/*</exclude-pattern>
+    <exclude-pattern>/vendor-bin/*</exclude-pattern>
     <exclude-pattern>/stubs/*</exclude-pattern>
 
     <arg name="basepath" value="."/>

@@ -45,6 +45,11 @@ composer test  # PHPUnit
 composer ci    # all of the above, in this order
 ```
 
+Each tool has its own dependency tree under `vendor-bin/` (`bamarni/composer-bin-plugin`),
+so PHPCS, PHPStan, PHPUnit and the linter never constrain each other nor the
+WordPress, WooCommerce and Subscriptions versions the tests run against. A plain
+`composer install` installs all of them and links their binaries into `vendor/bin`.
+
 ### Tests
 
 `composer install` brings in WordPress itself (`vendor/wordpress`), the
