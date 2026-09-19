@@ -13,6 +13,8 @@
  * Plugin URI:        https://github.com/LibreSign/woocommerce-nextcloud-admin-group-manager
  * Description:       Integrate WooCommerce with LibreSign SaaS using the Nextcloud app Admin Group Manager
  * Version:           1.0.1
+ * Requires at least: 7.0
+ * Requires PHP:      8.3
  * Author:            LibreCode
  * Author URI:        https://github.com/LibreSign
  * Text Domain:       wp-nextcloud-admin-group-manager
@@ -44,10 +46,10 @@ include __DIR__ . '/includes/agm-user-id-equal-to-email.php';
 include __DIR__ . '/includes/agm-update-email.php';
 include __DIR__ . '/includes/agm-settings.php';
 
-new AgmStatusCanceled();
-new AgmStatusFailed();
-new AgmStatusProcessing();
-new AgmSubscriptionUpdated();
-new AgmAddToCartValidation();
-new AgmUserIdEqualToEmail();
-new AgmUpdateEmail();
+new Agm_StatusCanceled();
+new Agm_StatusFailed();
+new Agm_StatusProcessing();
+new Agm_SubscriptionUpdated();
+new Agm_AddToCartValidation();
+new Agm_UserIdEqualToEmail();
+new Agm_UpdateEmail();

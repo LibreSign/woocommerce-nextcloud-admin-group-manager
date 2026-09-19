@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmSubscriptionUpdated extends AgmToggleEnabled
+class Agm_SubscriptionUpdated extends Agm_ToggleEnabled
 {
     public function __construct()
     {

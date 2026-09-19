@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-class AgmStatusFailed extends AgmToggleEnabled
+class Agm_StatusFailed extends Agm_ToggleEnabled
 {
     public function __construct()
     {
