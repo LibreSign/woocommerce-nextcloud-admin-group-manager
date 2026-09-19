@@ -3,16 +3,13 @@
 namespace LibreSign\WooNextcloud\Tests\Integration\Includes;
 
 use Agm_ToggleEnabled;
-use LibreSign\WooNextcloud\Tests\Support\FakeHttp;
-use LibreSign\WooNextcloud\Tests\Support\NextcloudSettings;
+use LibreSign\WooNextcloud\Tests\Support\NextcloudServer;
 use LibreSign\WooNextcloud\Tests\Support\OrderFactory;
 use WP_UnitTestCase;
 
 final class ToggleEnabledTest extends WP_UnitTestCase {
 
-	use NextcloudSettings;
-
-	private const ENDPOINT = self::NEXTCLOUD_HOST . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled';
+	private const ENDPOINT = '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled';
 
 	private $nextcloud;
 
@@ -21,10 +18,8 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		$this->register_nextcloud_settings();
-
-		$this->nextcloud = new FakeHttp();
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud = new NextcloudServer();
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 		$this->orders = new OrderFactory();
 	}
 
@@ -42,17 +37,17 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 
 		do_action( $hook, $order->get_id() );
 
-		$request = $this->nextcloud->requests()[0];
+		$request = $this->nextcloud->request();
 
-		$this->assertSame( self::ENDPOINT, $request['url'] );
+		$this->assertSame( self::ENDPOINT, $request->getRequestUri() );
 		$this->assertSame(
 			array(
 				'groupid' => 'ana',
-				'enabled' => 0,
+				'enabled' => '0',
 			),
-			$request['args']['body']
+			$request->getParsedInput()
 		);
-		$this->assertSame( $this->expected_authorization(), $request['args']['headers']['Authorization'] );
+		$this->assertSame( $this->nextcloud->expected_authorization(), $request->getHeaders()['Authorization'] );
 	}
 
 	public static function provide_statuses_that_close_the_account() {
@@ -63,7 +58,7 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 	public function test_leaves_nextcloud_alone_when_the_order_no_longer_exists() {
 		( new Agm_ToggleEnabled() )->disable( 987654321 );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 
 	public function test_disables_the_guest_account_under_the_billing_email_it_was_created_with() {
@@ -71,13 +66,13 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 
 		do_action( 'woocommerce_order_status_cancelled', $order->get_id() );
 
-		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->urls() );
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
 		$this->assertSame(
 			array(
 				'groupid' => 'guest@example.org',
-				'enabled' => 0,
+				'enabled' => '0',
 			),
-			$this->nextcloud->args()['body']
+			$this->nextcloud->request()->getParsedInput()
 		);
 	}
 
@@ -86,6 +81,6 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 
 		do_action( 'woocommerce_order_status_cancelled', $order->get_id() );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 }

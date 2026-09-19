@@ -2,25 +2,20 @@
 
 namespace LibreSign\WooNextcloud\Tests\Integration\Includes;
 
-use LibreSign\WooNextcloud\Tests\Support\FakeHttp;
-use LibreSign\WooNextcloud\Tests\Support\NextcloudSettings;
-use WP_Error;
+use LibreSign\WooNextcloud\Tests\Support\HttpFailure;
+use LibreSign\WooNextcloud\Tests\Support\NextcloudServer;
 use WP_UnitTestCase;
 
 final class SettingsTest extends WP_UnitTestCase {
 
-	use NextcloudSettings;
-
-	private const ENDPOINT = self::NEXTCLOUD_HOST . '/ocs/v2.php/cloud/user?format=json';
+	private const ENDPOINT = '/ocs/v2.php/cloud/user?format=json';
 
 	private $nextcloud;
 
 	public function set_up() {
 		parent::set_up();
 
-		$this->register_nextcloud_settings();
-
-		$this->nextcloud = new FakeHttp();
+		$this->nextcloud = new NextcloudServer();
 	}
 
 	private function ocs_body( $status, $statuscode, $id = '' ) {
@@ -38,19 +33,18 @@ final class SettingsTest extends WP_UnitTestCase {
 	}
 
 	public function test_asks_nextcloud_who_the_configured_user_is() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200, $this->ocs_body( 'ok', 200, 'admin' ) ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200, $this->ocs_body( 'ok', 200, 'admin' ) ) );
 
 		agm_test_nextcloud_connection();
 
-		$request = $this->nextcloud->requests()[0];
+		$request = $this->nextcloud->request();
 
-		$this->assertSame( self::ENDPOINT, $request['url'] );
-		$this->assertSame( $this->expected_authorization(), $request['args']['headers']['Authorization'] );
-		$this->assertSame( 15, $request['args']['timeout'] );
+		$this->assertSame( self::ENDPOINT, $request->getRequestUri() );
+		$this->assertSame( $this->nextcloud->expected_authorization(), $request->getHeaders()['Authorization'] );
 	}
 
 	public function test_confirms_the_connection_naming_the_user_that_answered() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200, $this->ocs_body( 'ok', 200, 'admin' ) ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200, $this->ocs_body( 'ok', 200, 'admin' ) ) );
 
 		$this->assertSame(
 			array(
@@ -62,7 +56,7 @@ final class SettingsTest extends WP_UnitTestCase {
 	}
 
 	public function test_confirms_the_connection_when_nextcloud_names_no_user() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200, $this->ocs_body( 'ok', 200 ) ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200, $this->ocs_body( 'ok', 200 ) ) );
 
 		$this->assertSame(
 			'Conexão com o Nextcloud validada com sucesso.',
@@ -80,11 +74,11 @@ final class SettingsTest extends WP_UnitTestCase {
 			),
 			agm_test_nextcloud_connection()
 		);
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 
 	public function test_reports_a_host_that_cannot_be_reached() {
-		$this->nextcloud->answer_with( new WP_Error( 'http_request_failed', 'Connection timed out' ) );
+		HttpFailure::on_every_request( 'Connection timed out' );
 
 		$this->assertSame(
 			array(
@@ -96,7 +90,7 @@ final class SettingsTest extends WP_UnitTestCase {
 	}
 
 	public function test_reports_credentials_nextcloud_rejected() {
-		$this->nextcloud->answer_with( FakeHttp::response( 401, $this->ocs_body( 'failure', 997 ) ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 401, $this->ocs_body( 'failure', 997 ) ) );
 
 		$this->assertSame(
 			array(
@@ -108,7 +102,7 @@ final class SettingsTest extends WP_UnitTestCase {
 	}
 
 	public function test_reports_an_ocs_answer_that_is_not_a_success() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200, $this->ocs_body( 'failure', 997 ) ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200, $this->ocs_body( 'failure', 997 ) ) );
 
 		$this->assertSame(
 			array(
@@ -120,10 +114,10 @@ final class SettingsTest extends WP_UnitTestCase {
 	}
 
 	public function test_builds_the_ocs_url_without_doubling_the_slash() {
-		update_option( 'nextcloud_api_host', self::NEXTCLOUD_HOST . '/' );
+		update_option( 'nextcloud_api_host', $this->nextcloud->root() . '/' );
 
 		$this->assertSame(
-			self::NEXTCLOUD_HOST . '/ocs/v2.php/cloud/user',
+			$this->nextcloud->root() . '/ocs/v2.php/cloud/user',
 			agm_build_nextcloud_ocs_url( '/ocs/v2.php/cloud/user' )
 		);
 	}
@@ -143,7 +137,7 @@ final class SettingsTest extends WP_UnitTestCase {
 		$_GET['page']             = 'nextcloud-config';
 		$_GET['settings-updated'] = 'true';
 
-		$this->nextcloud->answer_with( FakeHttp::response( 200, $this->ocs_body( 'ok', 200, 'admin' ) ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200, $this->ocs_body( 'ok', 200, 'admin' ) ) );
 
 		agm_maybe_test_nextcloud_connection_after_save();
 
@@ -160,6 +154,6 @@ final class SettingsTest extends WP_UnitTestCase {
 
 		agm_maybe_test_nextcloud_connection_after_save();
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 }

@@ -2,20 +2,17 @@
 
 namespace LibreSign\WooNextcloud\Tests\Integration\Includes;
 
-use LibreSign\WooNextcloud\Tests\Support\FakeHttp;
-use LibreSign\WooNextcloud\Tests\Support\NextcloudSettings;
+use LibreSign\WooNextcloud\Tests\Support\HttpFailure;
+use LibreSign\WooNextcloud\Tests\Support\NextcloudServer;
 use LibreSign\WooNextcloud\Tests\Support\OrderFactory;
 use WC_Order;
-use WP_Error;
 use WP_UnitTestCase;
 
 final class StatusProcessingTest extends WP_UnitTestCase {
 
-	use NextcloudSettings;
+	private const ENDPOINT = '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group';
 
-	private const ENDPOINT = self::NEXTCLOUD_HOST . '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group';
-
-	private const SET_ENABLED_ENDPOINT = self::NEXTCLOUD_HOST . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled';
+	private const SET_ENABLED_ENDPOINT = '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled';
 
 	private const RETRY_HOOK = 'agm_retry_nextcloud_sync';
 
@@ -28,9 +25,7 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		$this->register_nextcloud_settings();
-
-		$this->nextcloud = new FakeHttp();
+		$this->nextcloud = new NextcloudServer();
 		$this->orders    = new OrderFactory();
 	}
 
@@ -50,7 +45,7 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	}
 
 	public function test_sends_the_customer_and_the_plan_to_nextcloud() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200, '{"ocs":{"meta":{"status":"ok"}}}' ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200, '{"ocs":{"meta":{"status":"ok"}}}' ) );
 
 		$user  = self::factory()->user->create_and_get(
 			array(
@@ -71,9 +66,9 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 
 		$this->process( $order );
 
-		$request = $this->nextcloud->requests()[0];
+		$request = $this->nextcloud->request();
 
-		$this->assertSame( self::ENDPOINT, $request['url'] );
+		$this->assertSame( self::ENDPOINT, $request->getRequestUri() );
 		$this->assertSame(
 			array(
 				'groupid'     => 'ana',
@@ -82,15 +77,14 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 				'quota'       => '5GB',
 				'groups'      => array( 'signers', 'admins' ),
 			),
-			$request['args']['body']
+			$request->getParsedInput()
 		);
-		$this->assertSame( $this->expected_authorization(), $request['args']['headers']['Authorization'] );
-		$this->assertSame( 'true', $request['args']['headers']['OCS-APIRequest'] );
-		$this->assertSame( 15, $request['args']['timeout'] );
+		$this->assertSame( $this->nextcloud->expected_authorization(), $request->getHeaders()['Authorization'] );
+		$this->assertSame( 'true', $request->getHeaders()['OCS-APIRequest'] );
 	}
 
 	public function test_completes_the_order_when_nextcloud_accepts_it() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
 		$order = $this->process( $this->orders->order() );
 
@@ -102,11 +96,11 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	}
 
 	public function test_falls_back_to_the_billing_email_when_the_order_has_no_customer() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
 		$this->process( $this->orders->order( array( 'billing' => array( 'email' => 'guest@example.org' ) ) ) );
 
-		$body = $this->nextcloud->args()['body'];
+		$body = $this->nextcloud->request()->getParsedInput();
 
 		$this->assertSame( 'guest@example.org', $body['groupid'] );
 		$this->assertSame( 'guest@example.org', $body['email'] );
@@ -117,11 +111,11 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 		$order->update_meta_data( '_agm_nextcloud_sync_status', 'success' );
 		$order->save();
 
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
 		$order = $this->process( $order );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 		$this->assertSame( 'pending', $order->get_status() );
 	}
 
@@ -129,11 +123,11 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	 * @dataProvider provide_incomplete_orders
 	 */
 	public function test_refuses_an_order_it_cannot_describe( $build, $message ) {
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
 		$order = $this->process( $build( $this->orders ) );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 		$this->assertSame( 'failed', $order->get_meta( '_agm_nextcloud_sync_status', true ) );
 		$this->assertSame( $message, $order->get_meta( '_agm_nextcloud_sync_last_error', true ) );
 		$this->assertSame( '', $order->get_meta( '_agm_nextcloud_sync_attempts', true ) );
@@ -157,7 +151,7 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	}
 
 	public function test_keeps_the_order_open_and_schedules_a_retry_when_nextcloud_fails() {
-		$this->nextcloud->answer_with( FakeHttp::response( 500, '<p>Internal Server Error</p>' ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 500, '<p>Internal Server Error</p>' ) );
 
 		$order = $this->process( $this->orders->order() );
 
@@ -172,7 +166,7 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	}
 
 	public function test_records_the_transport_error_when_nextcloud_is_unreachable() {
-		$this->nextcloud->answer_with( new WP_Error( 'http_request_failed', 'Connection timed out' ) );
+		HttpFailure::on_every_request( 'Connection timed out' );
 
 		$order = $this->process( $this->orders->order() );
 
@@ -184,7 +178,7 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	 * @dataProvider provide_retry_delays
 	 */
 	public function test_spaces_the_retries_further_apart_on_every_attempt( $previous_attempts, $delay ) {
-		$this->nextcloud->answer_with( FakeHttp::response( 500 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 500 ) );
 
 		$order = $this->orders->order();
 		$order->update_meta_data( '_agm_nextcloud_sync_attempts', (string) $previous_attempts );
@@ -207,7 +201,7 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	}
 
 	public function test_gives_up_after_the_fifth_attempt() {
-		$this->nextcloud->answer_with( FakeHttp::response( 500 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 500 ) );
 
 		$order = $this->orders->order();
 		$order->update_meta_data( '_agm_nextcloud_sync_attempts', '4' );
@@ -223,22 +217,22 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	}
 
 	public function test_the_scheduled_retry_syncs_the_order_again() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
 		$order = $this->orders->order();
 
 		do_action( self::RETRY_HOOK, $order->get_id() );
 
-		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->urls() );
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
 		$this->assertSame( 'completed', wc_get_order( $order->get_id() )->get_status() );
 	}
 
 	public function test_a_retry_of_an_order_that_no_longer_exists_does_nothing() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
 		do_action( self::RETRY_HOOK, 987654321 );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 
 	public function test_offers_the_manual_retry_among_the_order_actions() {
@@ -249,7 +243,7 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	}
 
 	public function test_the_manual_retry_disables_the_account_of_an_order_no_longer_active() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
 		$user  = self::factory()->user->create_and_get( array( 'user_login' => 'ana' ) );
 		$order = $this->orders->order(
@@ -261,13 +255,13 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 
 		do_action( 'woocommerce_order_action_agm_retry_nextcloud_sync', $order );
 
-		$this->assertSame( array( self::SET_ENABLED_ENDPOINT ), $this->nextcloud->urls() );
+		$this->assertSame( array( self::SET_ENABLED_ENDPOINT ), $this->nextcloud->paths() );
 		$this->assertSame(
 			array(
 				'groupid' => 'ana',
-				'enabled' => 0,
+				'enabled' => '0',
 			),
-			$this->nextcloud->args()['body']
+			$this->nextcloud->request()->getParsedInput()
 		);
 
 		$order = wc_get_order( $order->get_id() );
@@ -277,13 +271,13 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 	}
 
 	public function test_the_manual_retry_syncs_an_order_still_active() {
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
 		$order = $this->orders->order();
 
 		do_action( 'woocommerce_order_action_agm_retry_nextcloud_sync', $order );
 
-		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->urls() );
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
 		$this->assertContains( 'Nextcloud sync completed successfully after manual retry.', $this->notes_of( wc_get_order( $order->get_id() ) ) );
 	}
 }

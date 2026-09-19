@@ -2,17 +2,14 @@
 
 namespace LibreSign\WooNextcloud\Tests\Integration\Includes;
 
-use LibreSign\WooNextcloud\Tests\Support\FakeHttp;
-use LibreSign\WooNextcloud\Tests\Support\NextcloudSettings;
+use LibreSign\WooNextcloud\Tests\Support\NextcloudServer;
 use LibreSign\WooNextcloud\Tests\Support\OrderFactory;
 use WC_Order;
 use WP_UnitTestCase;
 
 final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 
-	use NextcloudSettings;
-
-	private const ENDPOINT = self::NEXTCLOUD_HOST . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled';
+	private const ENDPOINT = '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled';
 
 	private $nextcloud;
 
@@ -23,10 +20,8 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 	public function set_up() {
 		parent::set_up();
 
-		$this->register_nextcloud_settings();
-
-		$this->nextcloud = new FakeHttp();
-		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
+		$this->nextcloud = new NextcloudServer();
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 		$this->orders = new OrderFactory();
 
 		$user        = self::factory()->user->create_and_get( array( 'user_login' => 'ana' ) );
@@ -59,13 +54,13 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 	public function test_closes_the_account_of_every_order_behind_the_subscription( $status ) {
 		$this->announce( $this->subscription_of_the_order( $status ) );
 
-		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->urls() );
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
 		$this->assertSame(
 			array(
 				'groupid' => 'ana',
-				'enabled' => 0,
+				'enabled' => '0',
 			),
-			$this->nextcloud->args()['body']
+			$this->nextcloud->request()->getParsedInput()
 		);
 	}
 
@@ -80,13 +75,13 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 	public function test_reopens_the_account_and_completes_the_orders_when_the_plan_goes_active() {
 		$this->announce( $this->subscription_of_the_order( 'active' ) );
 
-		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->urls() );
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
 		$this->assertSame(
 			array(
 				'groupid' => 'ana',
-				'enabled' => 1,
+				'enabled' => '1',
 			),
-			$this->nextcloud->args()['body']
+			$this->nextcloud->request()->getParsedInput()
 		);
 		$this->assertSame( 'completed', wc_get_order( $this->order->get_id() )->get_status() );
 	}
@@ -94,12 +89,12 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 	public function test_ignores_a_subscription_still_waiting_for_the_first_payment() {
 		$this->announce( $this->subscription_of_the_order( 'pending' ) );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 
 	public function test_ignores_a_subscription_that_no_longer_exists() {
 		do_action( 'woocommerce_subscription_status_changed', 987654321, 'active', 'cancelled' );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 }

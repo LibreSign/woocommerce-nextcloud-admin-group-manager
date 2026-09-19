@@ -67,6 +67,10 @@ tests_add_filter(
 			return $preempt;
 		}
 
+		if ( '127.0.0.1' === wp_parse_url( $url, PHP_URL_HOST ) ) {
+			return $preempt;
+		}
+
 		return new WP_Error(
 			'agm_tests_http_blocked',
 			sprintf( 'Unexpected HTTP request to %s. Stub it with the pre_http_request filter.', $url )

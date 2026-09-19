@@ -55,7 +55,8 @@ WordPress, WooCommerce and Subscriptions versions the tests run against. A plain
 `composer install` brings in WordPress itself (`vendor/wordpress`), the
 WordPress test suite, WooCommerce and WooCommerce Subscriptions
 (`vendor/test-plugins`), so the only thing the tests need from outside is a
-MySQL/MariaDB server and a database they are allowed to wipe on every run.
+MySQL/MariaDB server, a database they are allowed to wipe on every run and
+`ext-sockets`.
 
 | Variable | Default |
 |---|---|
@@ -83,7 +84,11 @@ docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-grou
 the hook WooCommerce fires in production, against real orders, products,
 subscriptions and users.
 
-Nothing is mocked. Outgoing HTTP is answered through the `pre_http_request`
-filter (`tests/Support/FakeHttp.php`), which is WordPress' own extension point,
-and any request that is not answered that way fails the test instead of
-reaching the network.
+Nothing is mocked. `tests/Support/NextcloudServer.php` starts a real HTTP
+server (`donatj/mock-webserver`, which needs `ext-sockets`), points
+`nextcloud_api_host` at it and lets WordPress send the request through its own
+transport, so the tests assert the method, the URI, the headers and the body
+Nextcloud would have received. Only a transport failure is simulated, through
+the `pre_http_request` filter (`tests/Support/HttpFailure.php`); any other
+request that does not reach the mock server fails the test instead of reaching
+the network.
