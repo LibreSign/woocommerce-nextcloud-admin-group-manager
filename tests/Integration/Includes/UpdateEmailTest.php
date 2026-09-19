@@ -23,8 +23,6 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 
 		$this->register_nextcloud_settings();
 
-		remove_action( 'shutdown', 'wp_ob_end_flush_all', 1 );
-
 		$this->nextcloud = new FakeHttp();
 		$this->nextcloud->answer_with( FakeHttp::response( 200 ) );
 
@@ -39,13 +37,14 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 		$this->nextcloud->forget();
 	}
 
+	public function tear_down() {
+		unset( $_POST['pass1'], $_POST['pass2'], $_POST['password_1'], $_POST['password_2'] );
+
+		parent::tear_down();
+	}
+
 	public function test_sends_the_new_address_when_the_profile_changes() {
-		wp_update_user(
-			array(
-				'ID'         => $this->user_id,
-				'user_email' => 'ana@libresign.coop',
-			)
-		);
+		$this->update_email( 'ana@libresign.coop' );
 
 		$request = $this->nextcloud->requests()[0];
 
@@ -60,14 +59,13 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 		$this->assertSame( $this->expected_authorization(), $request['args']['headers']['Authorization'] );
 	}
 
-	public function test_sends_the_new_password_once_wordpress_stored_it() {
-		wp_set_password( 'the-new-password', $this->user_id );
+	public function test_sends_the_password_the_profile_form_posted() {
+		$_POST['pass1'] = 'the-new-password';
+		$_POST['pass2'] = 'the-new-password';
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->update_email( 'ana@libresign.coop' );
 
-		do_action( 'shutdown' );
-
-		$request = $this->nextcloud->requests()[0];
+		$request = $this->nextcloud->requests()[1];
 
 		$this->assertSame( self::USER_ENDPOINT, $request['url'] );
 		$this->assertSame( 'PUT', $request['args']['method'] );
@@ -80,19 +78,36 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 		);
 	}
 
-	public function test_ignores_a_password_that_did_not_change() {
-		wp_set_password( 'the-old-password', $this->user_id );
+	public function test_sends_the_password_the_account_form_posted() {
+		$_POST['password_1'] = 'the-new-password';
+		$_POST['password_2'] = 'the-new-password';
 
-		do_action( 'shutdown' );
+		$this->update_email( 'ana@libresign.coop' );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( self::USER_ENDPOINT, $this->nextcloud->urls()[1] );
 	}
 
-	public function test_ignores_the_password_of_a_user_being_created() {
-		self::factory()->user->create( array( 'user_login' => 'bruno' ) );
+	public function test_ignores_a_password_the_confirmation_does_not_match() {
+		$_POST['pass1'] = 'the-new-password';
+		$_POST['pass2'] = 'a-typo';
 
-		do_action( 'shutdown' );
+		$this->update_email( 'ana@libresign.coop' );
 
-		$this->assertSame( array(), $this->nextcloud->urls() );
+		$this->assertSame( array( self::EMAIL_ENDPOINT ), $this->nextcloud->urls() );
+	}
+
+	public function test_ignores_a_profile_change_that_posted_no_password() {
+		$this->update_email( 'ana@libresign.coop' );
+
+		$this->assertSame( array( self::EMAIL_ENDPOINT ), $this->nextcloud->urls() );
+	}
+
+	private function update_email( $email ) {
+		wp_update_user(
+			array(
+				'ID'         => $this->user_id,
+				'user_email' => $email,
+			)
+		);
 	}
 }
