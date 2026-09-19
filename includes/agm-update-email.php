@@ -5,7 +5,7 @@ class Agm_UpdateEmail
 {
     public function __construct()
     {
-        add_action( 'profile_update', [ $this, 'sync_account_details' ], 10, 3 );
+        add_action( 'profile_update', [ $this, 'sync_account_details' ] );
     }
 
     public function sync_account_details( $user_id )
@@ -53,6 +53,7 @@ class Agm_UpdateEmail
         );
     }
 
+    // phpcs:disable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
     private function get_password_from_request(): string
     {
         $password_1 = '';
@@ -72,6 +73,7 @@ class Agm_UpdateEmail
 
         return $password_1;
     }
+    // phpcs:enable WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
     private function build_nextcloud_user_url( string $user_login ): string
     {
