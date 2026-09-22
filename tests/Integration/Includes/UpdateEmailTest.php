@@ -88,7 +88,29 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 		$this->submit_woocommerce_account( 'the-old-password', 'the-new-password' );
 		$this->finish_request();
 
-		$this->assert_sent_password( 'the-new-password', 3 );
+		$this->assert_sent_password( 'the-new-password' );
+	}
+
+	public function test_sends_the_password_reset_through_wordpress() {
+		reset_password( get_userdata( $this->user_id ), 'the-new-password' );
+		$this->finish_request();
+
+		$this->assert_sent_password( 'the-new-password' );
+	}
+
+	public function test_ignores_password_fields_left_in_a_request_that_did_not_change_the_password() {
+		$_POST['pass1'] = 'not-the-password';
+		$_POST['pass2'] = 'not-the-password';
+
+		wp_update_user(
+			array(
+				'ID'         => $this->user_id,
+				'user_email' => 'ana@libresign.coop',
+			)
+		);
+		$this->finish_request();
+
+		$this->assertSame( array( self::EMAIL_ENDPOINT ), $this->nextcloud->paths() );
 	}
 
 	public function test_ignores_a_profile_saved_without_a_new_password() {
