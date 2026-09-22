@@ -77,18 +77,3 @@ docker exec wordpress-docker-mariadb-1 \
 docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-group-manager \
   wordpress-docker-wordpress-1 composer test
 ```
-
-`tests/Integration/` mirrors the plugin files with `Test.php` appended:
-`includes/agm-status-processing.php` is covered by
-`tests/Integration/Includes/StatusProcessingTest.php`. Every test goes through
-the hook WooCommerce fires in production, against real orders, products,
-subscriptions and users.
-
-Nothing is mocked. `tests/Support/NextcloudServer.php` starts a real HTTP
-server (`donatj/mock-webserver`, which needs `ext-sockets`), points
-`nextcloud_api_host` at it and lets WordPress send the request through its own
-transport, so the tests assert the method, the URI, the headers and the body
-Nextcloud would have received. Only a transport failure is simulated, through
-the `pre_http_request` filter (`tests/Support/HttpFailure.php`); any other
-request that does not reach the mock server fails the test instead of reaching
-the network.
