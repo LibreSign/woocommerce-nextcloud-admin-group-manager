@@ -21,14 +21,14 @@ class Agm_ToggleEnabled
         if (!$groupid) {
             return;
         }
-        wp_remote_post(
-            get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled',
+        agm_nextcloud_request(
+            'POST',
+            '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled',
             [
                 'body' => [
                     'groupid' => $groupid,
                     'enabled' => $enabled,
                 ],
-                'headers' => agm_nextcloud_request_headers(),
             ]
         );
     }

@@ -62,11 +62,6 @@ function agm_admin_settings() {
 
 add_action('admin_init', 'agm_admin_settings');
 
-function agm_build_nextcloud_ocs_url(string $path): string {
-    $host = (string) get_option('nextcloud_api_host');
-    return rtrim($host, '/') . '/' . ltrim($path, '/');
-}
-
 function agm_test_nextcloud_connection(): array {
     $host = trim((string) get_option('nextcloud_api_host'));
     $login = trim((string) get_option('nextcloud_api_login'));
@@ -79,23 +74,17 @@ function agm_test_nextcloud_connection(): array {
         ];
     }
 
-    $response = wp_remote_get(
-        agm_build_nextcloud_ocs_url('/ocs/v2.php/cloud/user?format=json'),
-        [
-            'headers' => agm_nextcloud_request_headers(),
-            'timeout' => 15,
-        ]
-    );
+    $response = agm_nextcloud_request('GET', '/ocs/v2.php/cloud/user?format=json', ['timeout' => 15]);
 
-    if (is_wp_error($response)) {
+    if ('' !== $response->error) {
         return [
             'type' => 'error',
-            'message' => 'Falha ao conectar no Nextcloud: ' . $response->get_error_message(),
+            'message' => 'Falha ao conectar no Nextcloud: ' . $response->error,
         ];
     }
 
-    $status_code = (int) $response['response']['code'];
-    $body = json_decode((string) $response['body'], true);
+    $status_code = $response->status;
+    $body = json_decode($response->body, true);
     $ocs_status_code = (int) ($body['ocs']['meta']['statuscode'] ?? 0);
     $user_id = (string) ($body['ocs']['data']['id'] ?? '');
 
