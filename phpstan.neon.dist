@@ -8,6 +8,7 @@ parameters:
     paths:
         - woocommerce-nextcloud-admin-group-manager.php
         - includes
+        - src
         - tests
     bootstrapFiles:
         - vendor-bin/phpstan/vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php

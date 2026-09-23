@@ -1,6 +1,8 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
+use LibreSign\WooNextcloud\RetryPolicy;
+
 class Agm_StatusProcessing
 {
     private const SYNC_META_STATUS = '_agm_nextcloud_sync_status';
@@ -11,7 +13,6 @@ class Agm_StatusProcessing
     private const SYNC_STATUS_FAILED = 'failed';
     private const RETRY_HOOK = 'agm_retry_nextcloud_sync';
     private const RETRY_GROUP = 'nextcloud-admin-group-manager';
-    private const MAX_ATTEMPTS = 5;
 
     public function __construct()
     {
@@ -150,10 +151,10 @@ class Agm_StatusProcessing
         }
 
         $message = $this->build_failure_message($return);
-        $schedule_retry = $attempt < self::MAX_ATTEMPTS;
-        $this->mark_sync_failure($order, $message, $manual, $schedule_retry);
-        if ($schedule_retry) {
-            $this->schedule_retry($order_id, $attempt);
+        $retry_at = RetryPolicy::next_retry_at($attempt, time());
+        $this->mark_sync_failure($order, $message, $manual, null !== $retry_at);
+        if (null !== $retry_at) {
+            $this->schedule_retry($order_id, $retry_at);
         } else {
             $this->clear_retry_schedule($order_id);
         }
@@ -303,10 +304,9 @@ class Agm_StatusProcessing
         $order->add_order_note($note);
     }
 
-    private function schedule_retry(int $order_id, int $attempt): void
+    private function schedule_retry(int $order_id, int $timestamp): void
     {
         $this->clear_retry_schedule($order_id);
-        $timestamp = time() + $this->get_retry_delay($attempt);
         $args = ['order_id' => $order_id];
 
         if (function_exists('as_schedule_single_action')) {
@@ -324,19 +324,6 @@ class Agm_StatusProcessing
         }
 
         wp_clear_scheduled_hook(self::RETRY_HOOK, [$order_id]);
-    }
-
-    private function get_retry_delay(int $attempt): int
-    {
-        $delays = [
-            1 => 5 * MINUTE_IN_SECONDS,
-            2 => 15 * MINUTE_IN_SECONDS,
-            3 => HOUR_IN_SECONDS,
-            4 => 3 * HOUR_IN_SECONDS,
-            5 => 6 * HOUR_IN_SECONDS,
-        ];
-
-        return $delays[$attempt] ?? (6 * HOUR_IN_SECONDS);
     }
 
     private function log(string $message, array $context = []): void
