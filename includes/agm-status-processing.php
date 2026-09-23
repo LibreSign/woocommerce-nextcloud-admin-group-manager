@@ -1,6 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
+use LibreSign\WooNextcloud\AdminGroup;
 use LibreSign\WooNextcloud\RetryPolicy;
 
 class Agm_StatusProcessing
@@ -85,7 +86,7 @@ class Agm_StatusProcessing
         $order_id = $order->get_id();
 
         try {
-            $data = $this->get_order_data($order);
+            $payload = $this->get_order_data($order);
         } catch (RuntimeException $exception) {
             $this->mark_sync_failure($order, $exception->getMessage(), $manual, false);
             $this->log('Unable to build Nextcloud payload for disable sync', [
@@ -100,7 +101,7 @@ class Agm_StatusProcessing
         $this->log('Disabling Nextcloud account because order is not active', [
             'order_id' => $order_id,
             'order_status' => $order->get_status(),
-            'groupid' => $data->groupid ?? null,
+            'groupid' => $payload['groupid'],
         ]);
 
         (new Agm_ToggleEnabled())->disable($order_id);
@@ -118,7 +119,7 @@ class Agm_StatusProcessing
         $order_id = $order->get_id();
 
         try {
-            $data = $this->get_order_data($order);
+            $payload = $this->get_order_data($order);
         } catch (RuntimeException $exception) {
             $this->mark_sync_failure($order, $exception->getMessage(), $manual, false);
             $this->log('Unable to build Nextcloud payload', [
@@ -128,7 +129,6 @@ class Agm_StatusProcessing
             return;
         }
 
-        $payload = get_object_vars($data);
         $attempt = $this->increment_attempts($order);
         $this->set_sync_status($order, self::SYNC_STATUS_PENDING);
 
@@ -160,15 +160,7 @@ class Agm_StatusProcessing
         }
     }
 
-    /**
-     * Get order data from WooCommerce order object
-     * Data: customer name, customer email, purchased items
-     * 
-     * @param WC_Order $order
-     * @return stdClass
-     * @since 1.0.0
-     */
-    private function get_order_data($order): stdClass
+    private function get_order_data(WC_Order $order): array
     {
         $items = $order->get_items();
         $item = current($items);
@@ -181,35 +173,19 @@ class Agm_StatusProcessing
             throw new RuntimeException('Order item product not found');
         }
 
-        $attributes = $product->get_attributes();
         $user = $order->get_user();
 
-        $data = new stdClass();
-        $data->groupid = $user ? $user->user_login : $order->get_billing_email();
-        $data->email = $user ? $user->user_email : $order->get_billing_email();
-        $data->displayname = trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name());
-        if (!$data->groupid) {
-            throw new RuntimeException('Missing group identifier');
-        }
-        if (!$data->email) {
-            throw new RuntimeException('Missing email');
-        }
-        foreach ($attributes as $name => $attribute) {
-            preg_match('/^nextcloud-(?<type>string|list)-(?<name>.+)/', $name, $matches);
-            if (!$matches) {
-                continue;
-            }
-            $options = $attribute->get_options();
-            switch ($matches['type']) {
-                case 'string':
-                    $data->{$matches['name']} = current($options);
-                    break;
-                case 'list':
-                    $data->{$matches['name']} = $options;
-                    break;
-            }
-        }
-        return $data;
+        return AdminGroup::payload(
+            $user ? $user->user_login : null,
+            $user ? $user->user_email : null,
+            $order->get_billing_email(),
+            $order->get_billing_first_name(),
+            $order->get_billing_last_name(),
+            array_map(
+                static fn(WC_Product_Attribute $attribute): array => $attribute->get_options(),
+                $product->get_attributes()
+            )
+        );
     }
 
     private function request_succeeded($response): bool
