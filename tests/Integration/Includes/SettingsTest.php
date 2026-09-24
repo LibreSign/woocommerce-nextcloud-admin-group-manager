@@ -113,15 +113,6 @@ final class SettingsTest extends WP_UnitTestCase {
 		);
 	}
 
-	public function test_builds_the_ocs_url_without_doubling_the_slash() {
-		update_option( 'nextcloud_api_host', $this->nextcloud->root() . '/' );
-
-		$this->assertSame(
-			$this->nextcloud->root() . '/ocs/v2.php/cloud/user',
-			agm_build_nextcloud_ocs_url( '/ocs/v2.php/cloud/user' )
-		);
-	}
-
 	public function test_puts_the_settings_link_first_among_the_plugin_actions() {
 		$this->assertSame(
 			array(

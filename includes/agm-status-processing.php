@@ -2,6 +2,7 @@
 defined( 'ABSPATH' ) || exit;
 
 use LibreSign\WooNextcloud\AdminGroup;
+use LibreSign\WooNextcloud\NextcloudResponse;
 use LibreSign\WooNextcloud\RetryPolicy;
 
 class Agm_StatusProcessing
@@ -132,25 +133,25 @@ class Agm_StatusProcessing
         $attempt = $this->increment_attempts($order);
         $this->set_sync_status($order, self::SYNC_STATUS_PENDING);
 
-        $return = wp_remote_post(
-            get_option('nextcloud_api_host') . '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
+        $response = agm_nextcloud_request(
+            'POST',
+            '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
             [
                 'body' => $payload,
-                'headers' => agm_nextcloud_request_headers(),
                 'timeout' => 15,
             ]
         );
 
-        $this->log_response($order_id, $payload, $return, $attempt);
+        $this->log_response($order_id, $payload, $response, $attempt);
 
-        if ($this->request_succeeded($return)) {
+        if ($response->succeeded()) {
             $this->mark_sync_success($order, $manual);
             $order->set_status( 'completed', '', true );
             $order->save();
             return;
         }
 
-        $message = $this->build_failure_message($return);
+        $message = $response->failure_message();
         $retry_at = RetryPolicy::next_retry_at($attempt, time());
         $this->mark_sync_failure($order, $message, $manual, null !== $retry_at);
         if (null !== $retry_at) {
@@ -188,41 +189,20 @@ class Agm_StatusProcessing
         );
     }
 
-    private function request_succeeded($response): bool
-    {
-        return is_array($response) && isset($response['response']['code']) && (int)$response['response']['code'] === 200;
-    }
-
-    private function build_failure_message($response): string
-    {
-        if (is_wp_error($response)) {
-            return $response->get_error_message();
-        }
-
-        $status_code = (int)($response['response']['code'] ?? 0);
-        $body = (string)($response['body'] ?? '');
-
-        if ($status_code > 0) {
-            return sprintf('HTTP %d: %s', $status_code, wp_strip_all_tags($body));
-        }
-
-        return 'Unknown error while calling Nextcloud API.';
-    }
-
-    private function log_response($order_id, array $payload, $response, int $attempt): void
+    private function log_response($order_id, array $payload, NextcloudResponse $response, int $attempt): void
     {
         $context = [
             'order_id' => $order_id,
             'payload' => $payload,
             'attempt' => $attempt,
         ];
-        if (is_wp_error($response)) {
-            $context['error'] = $response->get_error_message();
+        if ('' !== $response->error) {
+            $context['error'] = $response->error;
             $this->log('Nextcloud request failed', $context);
             return;
         }
-        $context['response_code'] = $response['response']['code'] ?? null;
-        $context['response_body'] = $response['body'] ?? null;
+        $context['response_code'] = $response->status;
+        $context['response_body'] = $response->body;
         $this->log('Nextcloud request completed', $context);
     }
 

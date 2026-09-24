@@ -25,20 +25,11 @@
 
 defined( 'ABSPATH' ) || exit;
 
-function agm_nextcloud_request_headers(): array {
-	$login = (string) get_option( 'nextcloud_api_login' );
-	$password = (string) get_option( 'nextcloud_api_password' );
-
-	return array(
-		'Authorization'  => 'Basic ' . base64_encode( $login . ':' . $password ),
-		'Accept'         => 'application/json',
-		'OCS-APIRequest' => 'true',
-	);
-}
-
 require_once __DIR__ . '/src/AdminGroup.php';
+require_once __DIR__ . '/src/NextcloudResponse.php';
 require_once __DIR__ . '/src/RetryPolicy.php';
 
+include __DIR__ . '/includes/agm-nextcloud-request.php';
 include __DIR__ . '/includes/agm-toggle-enabled.php';
 include __DIR__ . '/includes/agm-status-canceled.php';
 include __DIR__ . '/includes/agm-status-failed.php';
