@@ -1,22 +1,6 @@
-const { expect } = require( '@playwright/test' );
+import { expect, Page } from '@playwright/test';
 
-const NEXTCLOUD = 'http://localhost:8890';
-
-const nextcloud = {
-	async answerWith( status ) {
-		await fetch( `${ NEXTCLOUD }/__status`, { method: 'PUT', body: String( status ) } );
-	},
-
-	async forget() {
-		await fetch( `${ NEXTCLOUD }/__requests`, { method: 'DELETE' } );
-	},
-
-	async requests() {
-		return ( await fetch( `${ NEXTCLOUD }/__requests` ) ).json();
-	},
-};
-
-async function buyTheNextcloudPlan( page, email ) {
+export async function buyTheNextcloudPlan( page: Page, email: string ): Promise< number > {
 	await page.goto( '/product/nextcloud-plan/' );
 	await page.getByRole( 'button', { name: 'Add to cart' } ).click();
 	await expect( page.getByRole( 'alert' ) ).toContainText( 'has been added to your cart' );
@@ -34,10 +18,10 @@ async function buyTheNextcloudPlan( page, email ) {
 
 	await expect( page ).toHaveURL( /\/checkout\/order-received\/\d+\// );
 
-	return Number( page.url().match( /order-received\/(\d+)\// )[ 1 ] );
+	return Number( page.url().match( /order-received\/(\d+)\// )![ 1 ] );
 }
 
-async function logInAsAdmin( page ) {
+export async function logInAsAdmin( page: Page ): Promise< void > {
 	await page.goto( '/wp-login.php' );
 	await page.getByLabel( 'Username or Email Address' ).fill( 'admin' );
 	await page.getByLabel( 'Password', { exact: true } ).fill( 'password' );
@@ -45,8 +29,6 @@ async function logInAsAdmin( page ) {
 	await expect( page ).toHaveURL( /wp-admin/ );
 }
 
-async function openOrder( page, orderId ) {
+export async function openOrder( page: Page, orderId: number ): Promise< void > {
 	await page.goto( `/wp-admin/admin.php?page=wc-orders&action=edit&id=${ orderId }` );
 }
-
-module.exports = { nextcloud, buyTheNextcloudPlan, logInAsAdmin, openOrder };

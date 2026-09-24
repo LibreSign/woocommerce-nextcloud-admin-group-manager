@@ -2,5 +2,5 @@
 /vendor-bin/*/vendor/
 /.phpunit.result.cache
 /node_modules/
-/test-results/
-/playwright-report/
+/tests/E2E/.results/
+/tests/E2E/.report/

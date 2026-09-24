@@ -13,6 +13,8 @@ wp option update nextcloud_api_login admin
 wp option update nextcloud_api_password admin-password
 
 wp wc payment_gateway update cod --enabled=true --user=admin
-wp wc product create --user=admin --porcelain \
-	--name='Nextcloud plan' --slug=nextcloud-plan --regular_price=10 --virtual=true \
-	--attributes='[{"name":"nextcloud-string-quota","options":["1GB"],"visible":false},{"name":"nextcloud-list-apps","options":["libresign","deck"],"visible":false}]'
+if [ -z "$(wp post list --post_type=product --name=nextcloud-plan --format=ids)" ]; then
+	wp wc product create --user=admin --porcelain \
+		--name='Nextcloud plan' --slug=nextcloud-plan --regular_price=10 --virtual=true \
+		--attributes='[{"name":"nextcloud-string-quota","options":["1GB"],"visible":false},{"name":"nextcloud-list-apps","options":["libresign","deck"],"visible":false}]'
+fi

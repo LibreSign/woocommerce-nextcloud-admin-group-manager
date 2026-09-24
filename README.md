@@ -80,15 +80,18 @@ docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-grou
 
 ### End-to-end tests
 
-The Playwright tests buy a product on a WordPress with WooCommerce and check
-what a stub of the Nextcloud API received. They need Docker, Node.js and a
-`composer install`, since the stack mounts WooCommerce and Subscriptions from
-`vendor/test-plugins`:
+`tests/E2E/` mirrors `includes/` with `.spec.ts` in place of `Test.php`:
+`includes/agm-status-processing.php` is covered end to end by
+`tests/E2E/Includes/StatusProcessing.spec.ts`. The specs buy a product on a
+WordPress with WooCommerce and check what a stub of the Nextcloud API received.
+
+They need Docker, Node.js and a `composer install`, since the stack mounts
+WooCommerce and Subscriptions from `vendor/test-plugins`:
 
 ```bash
 npm ci
 npx playwright install chromium
-npm run e2e:up    # WordPress on :8889, Nextcloud stub on :8890
-npm run e2e
-npm run e2e:down
+npm run env:start    # WordPress on :8889, Nextcloud stub on :8890
+npm run test:e2e
+npm run env:stop
 ```
