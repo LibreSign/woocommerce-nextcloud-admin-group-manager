@@ -4,6 +4,7 @@
 
     <file>.</file>
     <exclude-pattern>/vendor/*</exclude-pattern>
+    <exclude-pattern>/vendor-bin/*</exclude-pattern>
     <exclude-pattern>/stubs/*</exclude-pattern>
 
     <arg name="basepath" value="."/>
@@ -39,6 +40,7 @@
                 <element value="AGM_"/>
             </property>
         </properties>
+        <exclude-pattern>/tests/*</exclude-pattern>
     </rule>
 
     <rule ref="Generic.PHP.DisallowShortOpenTag"/>

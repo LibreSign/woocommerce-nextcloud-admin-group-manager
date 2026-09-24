@@ -1,0 +1,13 @@
+{
+    "require-dev": {
+        "donatj/mock-webserver": "^2.7",
+        "phpunit/phpunit": "^9.6",
+        "yoast/phpunit-polyfills": "^4.0"
+    },
+    "config": {
+        "platform": {
+            "php": "8.3"
+        },
+        "sort-packages": true
+    }
+}
