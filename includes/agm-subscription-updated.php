@@ -3,6 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Agm_SubscriptionUpdated extends Agm_ToggleEnabled
 {
+    /** @codeCoverageIgnore */
     public function __construct()
     {
         add_action('woocommerce_subscription_status_changed', [$this, 'teste']);

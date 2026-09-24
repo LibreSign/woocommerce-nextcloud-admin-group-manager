@@ -3,6 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Agm_UserIdEqualToEmail
 {
+    /** @codeCoverageIgnore */
     public function __construct()
     {
         add_filter('woocommerce_new_customer_username', [$this, 'new_customer_username'], 10, 2);

@@ -18,7 +18,6 @@
     </testsuites>
     <coverage>
         <include>
-            <file>woocommerce-nextcloud-admin-group-manager.php</file>
             <directory suffix=".php">includes</directory>
             <directory suffix=".php">src</directory>
         </include>

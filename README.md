@@ -81,12 +81,14 @@ docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-grou
 
 ### Layout and coverage
 
-`tests/Unit/StructureTest.php` keeps every file of the plugin covered by the
-test named after it: `src/AdminGroup.php` by `tests/Unit/AdminGroupTest.php`,
-`includes/agm-update-email.php` by `tests/Integration/Includes/UpdateEmailTest.php`,
-and the main file by `tests/Integration/WoocommerceNextcloudAdminGroupManagerTest.php`.
+`tests/Unit/StructureTest.php` checks that every file of the plugin has a test
+named after it: `src/AdminGroup.php` has `tests/Unit/AdminGroupTest.php`,
+`includes/agm-update-email.php` has `tests/Integration/Includes/UpdateEmailTest.php`,
+and the main file has `tests/Integration/WoocommerceNextcloudAdminGroupManagerTest.php`.
 It also fails on a test whose file no longer exists.
 
 `composer coverage` writes `tests/.coverage/clover.xml`. In CI,
 [octocov](https://github.com/k1LoW/octocov) fails the run when line coverage
-is below 75% or below the last report of `main` (`.octocov.yml`).
+is below 80% or below the last report of `main` (`.octocov.yml`). The main file
+and the constructors that register hooks run while the tests boot, before
+coverage starts, so they are left out of the report.
