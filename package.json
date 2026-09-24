@@ -1,0 +1,12 @@
+{
+  "name": "woocommerce-nextcloud-admin-group-manager",
+  "private": true,
+  "scripts": {
+    "e2e:up": "docker compose -f tests/E2E/docker-compose.yml up -d --wait && docker compose -f tests/E2E/docker-compose.yml run --rm cli",
+    "e2e:down": "docker compose -f tests/E2E/docker-compose.yml down -v",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
+}

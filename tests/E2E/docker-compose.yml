@@ -1,0 +1,56 @@
+name: agm-e2e
+
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: wordpress
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 20
+
+  wordpress:
+    image: wordpress:7.1-php8.3-apache
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      WORDPRESS_DB_HOST: mariadb
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: root
+      WORDPRESS_DB_NAME: wordpress
+    ports:
+      - "8889:80"
+    volumes:
+      - wordpress:/var/www/html
+      - ../..:/var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-group-manager:ro
+      - ../../vendor/test-plugins/woocommerce:/var/www/html/wp-content/plugins/woocommerce:ro
+      - ../../vendor/test-plugins/woocommerce-subscriptions:/var/www/html/wp-content/plugins/woocommerce-subscriptions:ro
+
+  cli:
+    image: wordpress:cli-php8.3
+    profiles: ["cli"]
+    user: "33:33"
+    environment:
+      WORDPRESS_DB_HOST: mariadb
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: root
+      WORDPRESS_DB_NAME: wordpress
+    volumes_from:
+      - wordpress
+    volumes:
+      - ./setup.sh:/setup.sh:ro
+    command: ["sh", "/setup.sh"]
+
+  nextcloud:
+    image: node:22-alpine
+    command: ["node", "/stub/nextcloud-stub.mjs"]
+    ports:
+      - "8890:80"
+    volumes:
+      - ./nextcloud-stub.mjs:/stub/nextcloud-stub.mjs:ro
+
+volumes:
+  wordpress:

@@ -77,3 +77,18 @@ docker exec wordpress-docker-mariadb-1 \
 docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-group-manager \
   wordpress-docker-wordpress-1 composer test
 ```
+
+### End-to-end tests
+
+The Playwright tests buy a product on a WordPress with WooCommerce and check
+what a stub of the Nextcloud API received. They need Docker, Node.js and a
+`composer install`, since the stack mounts WooCommerce and Subscriptions from
+`vendor/test-plugins`:
+
+```bash
+npm ci
+npx playwright install chromium
+npm run e2e:up    # WordPress on :8889, Nextcloud stub on :8890
+npm run e2e
+npm run e2e:down
+```
