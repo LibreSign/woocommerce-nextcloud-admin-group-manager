@@ -36,6 +36,9 @@ function agm_nextcloud_request_headers(): array {
 	);
 }
 
+require_once __DIR__ . '/src/AdminGroup.php';
+require_once __DIR__ . '/src/RetryPolicy.php';
+
 include __DIR__ . '/includes/agm-toggle-enabled.php';
 include __DIR__ . '/includes/agm-status-canceled.php';
 include __DIR__ . '/includes/agm-status-failed.php';

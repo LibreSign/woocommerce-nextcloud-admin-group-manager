@@ -1,6 +1,9 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
+use LibreSign\WooNextcloud\AdminGroup;
+use LibreSign\WooNextcloud\RetryPolicy;
+
 class Agm_StatusProcessing
 {
     private const SYNC_META_STATUS = '_agm_nextcloud_sync_status';
@@ -11,7 +14,6 @@ class Agm_StatusProcessing
     private const SYNC_STATUS_FAILED = 'failed';
     private const RETRY_HOOK = 'agm_retry_nextcloud_sync';
     private const RETRY_GROUP = 'nextcloud-admin-group-manager';
-    private const MAX_ATTEMPTS = 5;
 
     public function __construct()
     {
@@ -84,7 +86,7 @@ class Agm_StatusProcessing
         $order_id = $order->get_id();
 
         try {
-            $data = $this->get_order_data($order);
+            $payload = $this->get_order_data($order);
         } catch (RuntimeException $exception) {
             $this->mark_sync_failure($order, $exception->getMessage(), $manual, false);
             $this->log('Unable to build Nextcloud payload for disable sync', [
@@ -99,7 +101,7 @@ class Agm_StatusProcessing
         $this->log('Disabling Nextcloud account because order is not active', [
             'order_id' => $order_id,
             'order_status' => $order->get_status(),
-            'groupid' => $data->groupid ?? null,
+            'groupid' => $payload['groupid'],
         ]);
 
         (new Agm_ToggleEnabled())->disable($order_id);
@@ -117,7 +119,7 @@ class Agm_StatusProcessing
         $order_id = $order->get_id();
 
         try {
-            $data = $this->get_order_data($order);
+            $payload = $this->get_order_data($order);
         } catch (RuntimeException $exception) {
             $this->mark_sync_failure($order, $exception->getMessage(), $manual, false);
             $this->log('Unable to build Nextcloud payload', [
@@ -127,7 +129,6 @@ class Agm_StatusProcessing
             return;
         }
 
-        $payload = get_object_vars($data);
         $attempt = $this->increment_attempts($order);
         $this->set_sync_status($order, self::SYNC_STATUS_PENDING);
 
@@ -150,24 +151,16 @@ class Agm_StatusProcessing
         }
 
         $message = $this->build_failure_message($return);
-        $schedule_retry = $attempt < self::MAX_ATTEMPTS;
-        $this->mark_sync_failure($order, $message, $manual, $schedule_retry);
-        if ($schedule_retry) {
-            $this->schedule_retry($order_id, $attempt);
+        $retry_at = RetryPolicy::next_retry_at($attempt, time());
+        $this->mark_sync_failure($order, $message, $manual, null !== $retry_at);
+        if (null !== $retry_at) {
+            $this->schedule_retry($order_id, $retry_at);
         } else {
             $this->clear_retry_schedule($order_id);
         }
     }
 
-    /**
-     * Get order data from WooCommerce order object
-     * Data: customer name, customer email, purchased items
-     * 
-     * @param WC_Order $order
-     * @return stdClass
-     * @since 1.0.0
-     */
-    private function get_order_data($order): stdClass
+    private function get_order_data(WC_Order $order): array
     {
         $items = $order->get_items();
         $item = current($items);
@@ -180,35 +173,19 @@ class Agm_StatusProcessing
             throw new RuntimeException('Order item product not found');
         }
 
-        $attributes = $product->get_attributes();
         $user = $order->get_user();
 
-        $data = new stdClass();
-        $data->groupid = $user ? $user->user_login : $order->get_billing_email();
-        $data->email = $user ? $user->user_email : $order->get_billing_email();
-        $data->displayname = trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name());
-        if (!$data->groupid) {
-            throw new RuntimeException('Missing group identifier');
-        }
-        if (!$data->email) {
-            throw new RuntimeException('Missing email');
-        }
-        foreach ($attributes as $name => $attribute) {
-            preg_match('/^nextcloud-(?<type>string|list)-(?<name>.+)/', $name, $matches);
-            if (!$matches) {
-                continue;
-            }
-            $options = $attribute->get_options();
-            switch ($matches['type']) {
-                case 'string':
-                    $data->{$matches['name']} = current($options);
-                    break;
-                case 'list':
-                    $data->{$matches['name']} = $options;
-                    break;
-            }
-        }
-        return $data;
+        return AdminGroup::payload(
+            $user ? $user->user_login : null,
+            $user ? $user->user_email : null,
+            $order->get_billing_email(),
+            $order->get_billing_first_name(),
+            $order->get_billing_last_name(),
+            array_map(
+                static fn(WC_Product_Attribute $attribute): array => $attribute->get_options(),
+                $product->get_attributes()
+            )
+        );
     }
 
     private function request_succeeded($response): bool
@@ -303,10 +280,9 @@ class Agm_StatusProcessing
         $order->add_order_note($note);
     }
 
-    private function schedule_retry(int $order_id, int $attempt): void
+    private function schedule_retry(int $order_id, int $timestamp): void
     {
         $this->clear_retry_schedule($order_id);
-        $timestamp = time() + $this->get_retry_delay($attempt);
         $args = ['order_id' => $order_id];
 
         if (function_exists('as_schedule_single_action')) {
@@ -324,19 +300,6 @@ class Agm_StatusProcessing
         }
 
         wp_clear_scheduled_hook(self::RETRY_HOOK, [$order_id]);
-    }
-
-    private function get_retry_delay(int $attempt): int
-    {
-        $delays = [
-            1 => 5 * MINUTE_IN_SECONDS,
-            2 => 15 * MINUTE_IN_SECONDS,
-            3 => HOUR_IN_SECONDS,
-            4 => 3 * HOUR_IN_SECONDS,
-            5 => 6 * HOUR_IN_SECONDS,
-        ];
-
-        return $delays[$attempt] ?? (6 * HOUR_IN_SECONDS);
     }
 
     private function log(string $message, array $context = []): void

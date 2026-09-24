@@ -174,30 +174,20 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 		$this->assertSame( 'Connection timed out', $order->get_meta( '_agm_nextcloud_sync_last_error', true ) );
 	}
 
-	/**
-	 * @dataProvider provide_retry_delays
-	 */
-	public function test_spaces_the_retries_further_apart_on_every_attempt( $previous_attempts, $delay ) {
+	public function test_schedules_the_retry_for_the_delay_of_the_attempt() {
 		$this->nextcloud->answer_with( NextcloudServer::response( 500 ) );
 
 		$order = $this->orders->order();
-		$order->update_meta_data( '_agm_nextcloud_sync_attempts', (string) $previous_attempts );
+		$order->update_meta_data( '_agm_nextcloud_sync_attempts', '1' );
 		$order->save();
 
 		$this->process( $order );
 
 		$this->assertEqualsWithDelta(
-			time() + $delay,
+			time() + 15 * MINUTE_IN_SECONDS,
 			as_next_scheduled_action( self::RETRY_HOOK, array( 'order_id' => $order->get_id() ), self::RETRY_GROUP ),
 			5
 		);
-	}
-
-	public static function provide_retry_delays() {
-		yield 'the first failure waits five minutes' => array( 0, 5 * MINUTE_IN_SECONDS );
-		yield 'the second waits fifteen minutes'     => array( 1, 15 * MINUTE_IN_SECONDS );
-		yield 'the third waits an hour'              => array( 2, HOUR_IN_SECONDS );
-		yield 'the fourth waits three hours'         => array( 3, 3 * HOUR_IN_SECONDS );
 	}
 
 	public function test_gives_up_after_the_fifth_attempt() {
