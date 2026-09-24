@@ -20,14 +20,14 @@ class Agm_UpdateEmail
             return;
         }
 
-        wp_remote_post(
-            get_option( 'nextcloud_api_host' ) . '/ocs/v2.php/apps/admin_group_manager/api/v1/change-admin-email',
+        agm_nextcloud_request(
+            'POST',
+            '/ocs/v2.php/apps/admin_group_manager/api/v1/change-admin-email',
             [
                 'body' => [
                     'userId' => $user->user_login,
                     'email' => $user->user_email,
                 ],
-                'headers' => agm_nextcloud_request_headers(),
             ]
         );
     }
@@ -53,22 +53,16 @@ class Agm_UpdateEmail
                 continue;
             }
 
-            wp_remote_request(
-                $this->build_nextcloud_user_url( $user->user_login ),
+            agm_nextcloud_request(
+                'PUT',
+                '/ocs/v1.php/cloud/users/' . rawurlencode( $user->user_login ),
                 [
-                    'method'  => 'PUT',
-                    'body'    => [
+                    'body' => [
                         'key'   => 'password',
                         'value' => $password,
                     ],
-                    'headers' => agm_nextcloud_request_headers(),
                 ]
             );
         }
-    }
-
-    private function build_nextcloud_user_url( string $user_login ): string
-    {
-        return rtrim( (string) get_option( 'nextcloud_api_host' ), '/' ) . '/ocs/v1.php/cloud/users/' . rawurlencode( $user_login );
     }
 }

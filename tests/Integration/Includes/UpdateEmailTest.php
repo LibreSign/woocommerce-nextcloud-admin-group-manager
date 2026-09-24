@@ -77,6 +77,54 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 		$this->assertSame( $this->nextcloud->expected_authorization(), $request->getHeaders()['Authorization'] );
 	}
 
+	public function test_does_not_double_the_slash_after_the_host_when_sending_the_address() {
+		update_option( 'nextcloud_api_host', $this->nextcloud->root() . '/' );
+
+		wp_update_user(
+			array(
+				'ID'         => $this->user_id,
+				'user_email' => 'ana@libresign.coop',
+			)
+		);
+
+		$this->assertSame( array( self::EMAIL_ENDPOINT ), $this->nextcloud->paths() );
+	}
+
+	public function test_does_not_double_the_slash_after_the_host_when_sending_the_password() {
+		update_option( 'nextcloud_api_host', $this->nextcloud->root() . '/' );
+
+		reset_password( get_userdata( $this->user_id ), 'the-new-password' );
+		$this->finish_request();
+
+		$this->assert_sent_password( 'the-new-password' );
+	}
+
+	public function test_sends_the_password_as_the_configured_user() {
+		reset_password( get_userdata( $this->user_id ), 'the-new-password' );
+		$this->finish_request();
+
+		$request = $this->nextcloud->request();
+
+		$this->assertSame( $this->nextcloud->expected_authorization(), $request->getHeaders()['Authorization'] );
+		$this->assertSame( 'true', $request->getHeaders()['OCS-APIRequest'] );
+	}
+
+	public function test_encodes_the_login_in_the_password_endpoint() {
+		$user_id = self::factory()->user->create(
+			array(
+				'user_login' => 'ana lima@libresign',
+				'user_pass'  => 'the-old-password',
+			)
+		);
+		$this->finish_request();
+		$this->nextcloud->forget();
+
+		reset_password( get_userdata( $user_id ), 'the-new-password' );
+		$this->finish_request();
+
+		$this->assertSame( array( '/ocs/v1.php/cloud/users/ana%20lima%40libresign' ), $this->nextcloud->paths() );
+	}
+
 	public function test_sends_the_password_changed_on_the_wordpress_profile() {
 		$this->submit_wordpress_profile( 'the-new-password', 'the-new-password' );
 		$this->finish_request();
