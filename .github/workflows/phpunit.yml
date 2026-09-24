@@ -48,3 +48,43 @@ jobs:
       - uses: ramsey/composer-install@v3
 
       - run: composer test
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      WP_TESTS_DB_HOST: 127.0.0.1
+      WP_TESTS_DB_NAME: wordpress_test
+      WP_TESTS_DB_USER: root
+      WP_TESTS_DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mysqli, sockets
+          coverage: xdebug
+          tools: composer
+
+      - uses: ramsey/composer-install@v3
+
+      - run: composer coverage
+
+      - uses: k1LoW/octocov-action@v1

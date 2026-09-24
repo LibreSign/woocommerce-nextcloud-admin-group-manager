@@ -43,6 +43,7 @@ composer cs    # PHPCS
 composer stan  # PHPStan
 composer test  # PHPUnit
 composer ci    # all of the above, in this order
+composer coverage  # PHPUnit with a coverage report for octocov
 ```
 
 Each tool has its own dependency tree under `vendor-bin/` (`bamarni/composer-bin-plugin`),
@@ -77,3 +78,15 @@ docker exec wordpress-docker-mariadb-1 \
 docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-group-manager \
   wordpress-docker-wordpress-1 composer test
 ```
+
+### Layout and coverage
+
+`tests/Unit/StructureTest.php` keeps every file of the plugin covered by the
+test named after it: `src/AdminGroup.php` by `tests/Unit/AdminGroupTest.php`,
+`includes/agm-update-email.php` by `tests/Integration/Includes/UpdateEmailTest.php`,
+and the main file by `tests/Integration/WoocommerceNextcloudAdminGroupManagerTest.php`.
+It also fails on a test whose file no longer exists.
+
+`composer coverage` writes `tests/.coverage/clover.xml`. In CI,
+[octocov](https://github.com/k1LoW/octocov) fails the run when line coverage
+is below 75% or below the last report of `main` (`.octocov.yml`).

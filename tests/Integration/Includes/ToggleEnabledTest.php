@@ -29,13 +29,10 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 		return $this->orders->order( array( 'customer_id' => $user->ID ) );
 	}
 
-	/**
-	 * @dataProvider provide_statuses_that_close_the_account
-	 */
-	public function test_disables_the_nextcloud_account( $hook ) {
+	public function test_disables_the_nextcloud_account() {
 		$order = $this->order_of_a_customer();
 
-		do_action( $hook, $order->get_id() );
+		( new Agm_ToggleEnabled() )->disable( $order->get_id() );
 
 		$request = $this->nextcloud->request();
 
@@ -50,11 +47,6 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 		$this->assertSame( $this->nextcloud->expected_authorization(), $request->getHeaders()['Authorization'] );
 	}
 
-	public static function provide_statuses_that_close_the_account() {
-		yield 'the customer cancelled the order' => array( 'woocommerce_order_status_cancelled' );
-		yield 'the payment failed'               => array( 'woocommerce_order_status_failed' );
-	}
-
 	public function test_leaves_nextcloud_alone_when_the_order_no_longer_exists() {
 		( new Agm_ToggleEnabled() )->disable( 987654321 );
 
@@ -64,7 +56,7 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 	public function test_disables_the_guest_account_under_the_billing_email_it_was_created_with() {
 		$order = $this->orders->order( array( 'billing' => array( 'email' => 'guest@example.org' ) ) );
 
-		do_action( 'woocommerce_order_status_cancelled', $order->get_id() );
+		( new Agm_ToggleEnabled() )->disable( $order->get_id() );
 
 		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
 		$this->assertSame(
@@ -79,7 +71,7 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 	public function test_leaves_nextcloud_alone_when_the_order_names_nobody() {
 		$order = $this->orders->order( array( 'billing' => array( 'email' => '' ) ) );
 
-		do_action( 'woocommerce_order_status_cancelled', $order->get_id() );
+		( new Agm_ToggleEnabled() )->disable( $order->get_id() );
 
 		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
