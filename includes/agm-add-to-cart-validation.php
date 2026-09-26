@@ -3,6 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Agm_AddToCartValidation {
     
+    /** @codeCoverageIgnore */
     public function __construct() {
         // Hook into WooCommerce add to cart validation
         add_filter('woocommerce_add_to_cart_validation', [$this, 'validate_single_product'], 10, 3);
