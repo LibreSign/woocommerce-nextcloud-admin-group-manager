@@ -80,10 +80,10 @@ docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-grou
 
 ### End-to-end tests
 
-`tests/E2E/` mirrors `includes/` with `.spec.ts` in place of `Test.php`:
-`includes/agm-status-processing.php` is covered end to end by
-`tests/E2E/Includes/StatusProcessing.spec.ts`. The specs buy a product on a
-WordPress with WooCommerce and check what a stub of the Nextcloud API received.
+End-to-end tests cover the critical WooCommerce provisioning workflows through
+the browser. Currently, `tests/E2E/Includes/StatusProcessing.spec.ts` covers
+checkout provisioning and the manual retry flow handled by
+`includes/agm-status-processing.php`.
 
 They need Docker, Node.js and a `composer install`, since the stack mounts
 WooCommerce and Subscriptions from `vendor/test-plugins`:
