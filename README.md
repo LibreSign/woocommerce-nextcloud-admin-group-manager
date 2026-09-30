@@ -79,6 +79,24 @@ docker exec -w /var/www/html/wp-content/plugins/woocommerce-nextcloud-admin-grou
   wordpress-docker-wordpress-1 composer test
 ```
 
+### End-to-end tests
+
+End-to-end tests cover the critical WooCommerce provisioning workflows through
+the browser. Currently, `tests/E2E/Includes/StatusProcessing.spec.ts` covers
+checkout provisioning and the manual retry flow handled by
+`includes/agm-status-processing.php`.
+
+They need Docker, Node.js and a `composer install`, since the stack mounts
+WooCommerce and Subscriptions from `vendor/test-plugins`:
+
+```bash
+npm ci
+npx playwright install chromium
+npm run env:start    # WordPress on :8889, Nextcloud stub on :8890
+npm run test:e2e
+npm run env:stop
+```
+
 ### Layout and coverage
 
 Every file in `src/` and `includes/`, and the main plugin file, needs a test
