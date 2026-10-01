@@ -16,6 +16,7 @@ class Agm_StatusProcessing
     private const RETRY_HOOK = 'agm_retry_nextcloud_sync';
     private const RETRY_GROUP = 'nextcloud-admin-group-manager';
 
+    /** @codeCoverageIgnore */
     public function __construct()
     {
         add_action('woocommerce_order_status_processing', [$this, 'order_complete_message']);

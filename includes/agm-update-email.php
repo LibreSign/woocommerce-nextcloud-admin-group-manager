@@ -6,6 +6,7 @@ class Agm_UpdateEmail
     /** @var array<int, string> */
     private array $pending_passwords = [];
 
+    /** @codeCoverageIgnore */
     public function __construct()
     {
         add_action( 'profile_update', [ $this, 'sync_nextcloud_email' ] );

@@ -43,6 +43,7 @@ composer cs    # PHPCS
 composer stan  # PHPStan
 composer test  # PHPUnit
 composer ci    # all of the above, in this order
+composer coverage  # PHPUnit with a coverage report for octocov
 ```
 
 Each tool has its own dependency tree under `vendor-bin/` (`bamarni/composer-bin-plugin`),
@@ -95,3 +96,13 @@ npm run env:start    # WordPress on :8889, Nextcloud stub on :8890
 npm run test:e2e
 npm run env:stop
 ```
+
+### Layout and coverage
+
+Every file in `src/` and `includes/`, and the main plugin file, needs a test
+named after it. `tests/Unit/StructureTest.php` enforces this and also fails on
+a test whose source file no longer exists.
+
+`composer coverage` writes `tests/.coverage/clover.xml`. In CI,
+[octocov](https://github.com/k1LoW/octocov) fails the run when line coverage
+is below 80% or below the last report of `main` (`.octocov.yml`).
