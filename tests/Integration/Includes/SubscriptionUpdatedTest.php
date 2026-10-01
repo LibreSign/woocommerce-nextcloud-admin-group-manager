@@ -73,6 +73,9 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 	}
 
 	public function test_reopens_the_account_and_completes_the_orders_when_the_plan_goes_active() {
+		$this->order->update_meta_data( '_agm_nextcloud_sync_status', 'success' );
+		$this->order->save();
+
 		$this->announce( $this->subscription_of_the_order( 'active' ) );
 
 		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
@@ -96,6 +99,17 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 		$subscription->update_status( 'active' );
 
 		$this->assertNotContains( '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group', $this->nextcloud->paths() );
+	}
+
+	public function test_keeps_an_order_whose_nextcloud_sync_failed_open_when_the_plan_goes_active() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 500 ) );
+		$this->order->update_status( 'processing' );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+
+		$this->announce( $this->subscription_of_the_order( 'active' ) );
+
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
+		$this->assertSame( 'processing', wc_get_order( $this->order->get_id() )->get_status() );
 	}
 
 	public function test_ignores_a_subscription_still_waiting_for_the_first_payment() {

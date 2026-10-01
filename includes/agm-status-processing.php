@@ -7,11 +7,11 @@ use LibreSign\WooNextcloud\RetryPolicy;
 
 class Agm_StatusProcessing
 {
-    private const SYNC_META_STATUS = '_agm_nextcloud_sync_status';
+    public const SYNC_META_STATUS = '_agm_nextcloud_sync_status';
     private const SYNC_META_ATTEMPTS = '_agm_nextcloud_sync_attempts';
     private const SYNC_META_LAST_ERROR = '_agm_nextcloud_sync_last_error';
     private const SYNC_STATUS_PENDING = 'pending';
-    private const SYNC_STATUS_SUCCESS = 'success';
+    public const SYNC_STATUS_SUCCESS = 'success';
     private const SYNC_STATUS_FAILED = 'failed';
     private const RETRY_HOOK = 'agm_retry_nextcloud_sync';
     private const RETRY_GROUP = 'nextcloud-admin-group-manager';
