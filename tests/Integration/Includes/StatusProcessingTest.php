@@ -6,6 +6,7 @@ use LibreSign\WooNextcloud\Tests\Support\HttpFailure;
 use LibreSign\WooNextcloud\Tests\Support\NextcloudServer;
 use LibreSign\WooNextcloud\Tests\Support\OrderFactory;
 use WC_Order;
+use WCS_Related_Order_Store;
 use WP_UnitTestCase;
 
 final class StatusProcessingTest extends WP_UnitTestCase {
@@ -33,6 +34,21 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 		do_action( 'woocommerce_order_status_processing', $order->get_id() );
 
 		return wc_get_order( $order->get_id() );
+	}
+
+	private function switch_order( $attributes ) {
+		$subscription = wcs_create_subscription(
+			array(
+				'order_id'         => $this->orders->order()->get_id(),
+				'customer_id'      => self::factory()->user->create(),
+				'billing_period'   => 'month',
+				'billing_interval' => 1,
+			)
+		);
+		$order        = $this->orders->order( array( 'attributes' => $attributes ) );
+		WCS_Related_Order_Store::instance()->add_relation( $order, $subscription, 'switch' );
+
+		return $order;
 	}
 
 	private function notes_of( WC_Order $order ) {
@@ -117,6 +133,37 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 
 		$this->assertSame( array(), $this->nextcloud->paths() );
 		$this->assertSame( 'pending', $order->get_status() );
+	}
+
+	public function test_syncs_a_plan_switch_completed_without_going_through_processing() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+		$order = $this->switch_order( array( 'nextcloud-string-quota' => array( '800Gb' ) ) );
+
+		$order->update_status( 'completed' );
+		$order = wc_get_order( $order->get_id() );
+
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
+		$this->assertSame( '800Gb', $this->nextcloud->request()->getParsedInput()['quota'] );
+		$this->assertSame( 'success', $order->get_meta( '_agm_nextcloud_sync_status', true ) );
+		$this->assertContains( 'Nextcloud sync completed successfully.', $this->notes_of( $order ) );
+	}
+
+	public function test_syncs_a_processed_plan_switch_only_once() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+		$order = $this->switch_order( array( 'nextcloud-string-quota' => array( '800Gb' ) ) );
+
+		$order->update_status( 'processing' );
+
+		$this->assertSame( 'completed', wc_get_order( $order->get_id() )->get_status() );
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
+	}
+
+	public function test_ignores_an_order_completed_outside_a_plan_switch() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+
+		$this->orders->order()->update_status( 'completed' );
+
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 
 	/**
