@@ -119,6 +119,29 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 		$this->assertSame( 'pending', $order->get_status() );
 	}
 
+	public function test_syncs_an_order_completed_without_going_through_processing() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+		$order = $this->orders->order( array( 'attributes' => array( 'nextcloud-string-quota' => array( '800Gb' ) ) ) );
+
+		$order->update_status( 'completed' );
+		$order = wc_get_order( $order->get_id() );
+
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
+		$this->assertSame( '800Gb', $this->nextcloud->request()->getParsedInput()['quota'] );
+		$this->assertSame( 'success', $order->get_meta( '_agm_nextcloud_sync_status', true ) );
+		$this->assertContains( 'Nextcloud sync completed successfully.', $this->notes_of( $order ) );
+	}
+
+	public function test_syncs_a_processed_order_only_once_when_it_is_completed() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+		$order = $this->orders->order();
+
+		$order->update_status( 'processing' );
+
+		$this->assertSame( 'completed', wc_get_order( $order->get_id() )->get_status() );
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
+	}
+
 	/**
 	 * @dataProvider provide_incomplete_orders
 	 */
