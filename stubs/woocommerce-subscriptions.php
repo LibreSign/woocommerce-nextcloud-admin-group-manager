@@ -35,3 +35,22 @@ class WC_Subscriptions_Plugin {
  * @return WC_Subscription|WP_Error
  */
 function wcs_create_subscription( $args = array() ) {}
+
+/**
+ * @param int|WC_Subscription $subscription
+ * @return WC_Order|WP_Error
+ */
+function wcs_create_renewal_order( $subscription ) {}
+
+abstract class WCS_Related_Order_Store {
+	/**
+	 * @return self
+	 */
+	final public static function instance() {}
+
+	/**
+	 * @param string $relation_type
+	 * @return void
+	 */
+	abstract public function add_relation( WC_Order $order, WC_Order $subscription, $relation_type );
+}

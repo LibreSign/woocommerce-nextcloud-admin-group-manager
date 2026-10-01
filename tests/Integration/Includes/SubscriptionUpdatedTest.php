@@ -86,6 +86,18 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 		$this->assertSame( 'completed', wc_get_order( $this->order->get_id() )->get_status() );
 	}
 
+	public function test_reactivating_the_plan_does_not_send_the_plan_of_an_older_order() {
+		$subscription = $this->subscription_of_the_order( 'active' );
+		$subscription->add_product( current( $this->order->get_items() )->get_product() );
+		wcs_create_renewal_order( $subscription )->update_status( 'failed' );
+		$subscription->update_status( 'on-hold' );
+		$this->nextcloud->forget();
+
+		$subscription->update_status( 'active' );
+
+		$this->assertNotContains( '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group', $this->nextcloud->paths() );
+	}
+
 	public function test_ignores_a_subscription_still_waiting_for_the_first_payment() {
 		$this->announce( $this->subscription_of_the_order( 'pending' ) );
 

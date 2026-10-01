@@ -20,7 +20,7 @@ class Agm_StatusProcessing
     public function __construct()
     {
         add_action('woocommerce_order_status_processing', [$this, 'order_complete_message']);
-        add_action('woocommerce_order_status_completed', [$this, 'order_complete_message']);
+        add_action('woocommerce_subscriptions_switch_completed', [$this, 'switch_complete_message']);
         add_action(self::RETRY_HOOK, [$this, 'retry_sync']);
         add_filter('woocommerce_order_actions', [$this, 'register_order_action']);
         add_action('woocommerce_order_action_agm_retry_nextcloud_sync', [$this, 'manual_retry']);
@@ -40,6 +40,11 @@ class Agm_StatusProcessing
         }
 
         $this->sync_order($order);
+    }
+
+    public function switch_complete_message(WC_Order $order)
+    {
+        $this->order_complete_message($order->get_id());
     }
 
     public function retry_sync($order_id)
