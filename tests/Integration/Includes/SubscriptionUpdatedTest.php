@@ -73,6 +73,9 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 	}
 
 	public function test_reopens_the_account_and_completes_the_orders_when_the_plan_goes_active() {
+		$this->order->update_meta_data( '_agm_nextcloud_sync_status', 'success' );
+		$this->order->save();
+
 		$this->announce( $this->subscription_of_the_order( 'active' ) );
 
 		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
@@ -84,6 +87,30 @@ final class SubscriptionUpdatedTest extends WP_UnitTestCase {
 			$this->nextcloud->request()->getParsedInput()
 		);
 		$this->assertSame( 'completed', wc_get_order( $this->order->get_id() )->get_status() );
+	}
+
+	public function test_keeps_an_order_whose_nextcloud_sync_failed_open_when_the_plan_goes_active() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 500 ) );
+		$this->order->update_status( 'processing' );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+
+		$this->announce( $this->subscription_of_the_order( 'active' ) );
+
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
+		$this->assertSame( 'processing', wc_get_order( $this->order->get_id() )->get_status() );
+	}
+
+	public function test_keeps_an_order_never_provisioned_open_after_a_retry_disabled_it() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 500 ) );
+		$this->order->update_status( 'processing' );
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+		$this->order = wc_get_order( $this->order->get_id() );
+		$this->order->update_status( 'on-hold' );
+		do_action( 'agm_retry_nextcloud_sync', $this->order->get_id() );
+
+		$this->announce( $this->subscription_of_the_order( 'active' ) );
+
+		$this->assertSame( 'on-hold', wc_get_order( $this->order->get_id() )->get_status() );
 	}
 
 	public function test_ignores_a_subscription_still_waiting_for_the_first_payment() {

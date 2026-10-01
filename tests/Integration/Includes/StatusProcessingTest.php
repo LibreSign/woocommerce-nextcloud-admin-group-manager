@@ -256,8 +256,19 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 
 		$order = wc_get_order( $order->get_id() );
 
-		$this->assertSame( 'success', $order->get_meta( '_agm_nextcloud_sync_status', true ) );
+		$this->assertSame( 'disabled', $order->get_meta( '_agm_nextcloud_sync_status', true ) );
 		$this->assertContains( 'Nextcloud account disabled successfully after manual retry.', $this->notes_of( $order ) );
+	}
+
+	public function test_provisions_an_order_that_goes_active_after_a_retry_disabled_it() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+		$order = $this->orders->order( array( 'status' => 'on-hold' ) );
+		do_action( 'woocommerce_order_action_agm_retry_nextcloud_sync', $order );
+		$this->nextcloud->forget();
+
+		wc_get_order( $order->get_id() )->update_status( 'processing' );
+
+		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
 	}
 
 	public function test_the_manual_retry_syncs_an_order_still_active() {

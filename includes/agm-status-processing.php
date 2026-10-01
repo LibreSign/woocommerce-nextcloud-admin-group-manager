@@ -7,12 +7,13 @@ use LibreSign\WooNextcloud\RetryPolicy;
 
 class Agm_StatusProcessing
 {
-    private const SYNC_META_STATUS = '_agm_nextcloud_sync_status';
+    public const SYNC_META_STATUS = '_agm_nextcloud_sync_status';
     private const SYNC_META_ATTEMPTS = '_agm_nextcloud_sync_attempts';
     private const SYNC_META_LAST_ERROR = '_agm_nextcloud_sync_last_error';
     private const SYNC_STATUS_PENDING = 'pending';
-    private const SYNC_STATUS_SUCCESS = 'success';
+    public const SYNC_STATUS_SUCCESS = 'success';
     private const SYNC_STATUS_FAILED = 'failed';
+    private const SYNC_STATUS_DISABLED = 'disabled';
     private const RETRY_HOOK = 'agm_retry_nextcloud_sync';
     private const RETRY_GROUP = 'nextcloud-admin-group-manager';
 
@@ -108,7 +109,7 @@ class Agm_StatusProcessing
 
         (new Agm_ToggleEnabled())->disable($order_id);
 
-        $this->mark_sync_success($order, $manual);
+        $this->mark_sync_success($order, $manual, self::SYNC_STATUS_DISABLED);
         $order->add_order_note(
             $manual
                 ? 'Nextcloud account disabled successfully after manual retry.'
@@ -232,9 +233,9 @@ class Agm_StatusProcessing
         return (string)$order->get_meta(self::SYNC_META_STATUS, true);
     }
 
-    private function mark_sync_success(WC_Order $order, bool $manual): void
+    private function mark_sync_success(WC_Order $order, bool $manual, string $status = self::SYNC_STATUS_SUCCESS): void
     {
-        $order->update_meta_data(self::SYNC_META_STATUS, self::SYNC_STATUS_SUCCESS);
+        $order->update_meta_data(self::SYNC_META_STATUS, $status);
         $order->delete_meta_data(self::SYNC_META_LAST_ERROR);
         $order->save();
         $this->clear_retry_schedule($order->get_id());
