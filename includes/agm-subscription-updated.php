@@ -45,11 +45,16 @@ class Agm_SubscriptionUpdated extends Agm_ToggleEnabled
         foreach ($subscription->get_related_orders() as $order_id) {
             parent::enable($order_id);
             $order = wc_get_order($order_id);
-            if (!$order) {
+            if (!$order || !$this->is_synced($order)) {
                 continue;
             }
             $order->set_status( 'completed', '', true );
             $order->save();
         }
+    }
+
+    private function is_synced(WC_Order $order): bool
+    {
+        return Agm_StatusProcessing::SYNC_STATUS_SUCCESS === $order->get_meta(Agm_StatusProcessing::SYNC_META_STATUS, true);
     }
 }
