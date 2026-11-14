@@ -147,4 +147,46 @@ final class SettingsTest extends WP_UnitTestCase {
 
 		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
+
+	public function test_does_not_print_the_saved_password_on_the_settings_page() {
+		$page = $this->render_settings_page();
+
+		$this->assertStringNotContainsString( 'admin-password', $page );
+		$this->assertStringContainsString( '<input type="password" name="nextcloud_api_password" value=""', $page );
+	}
+
+	public function test_keeps_the_saved_password_when_the_field_is_left_empty() {
+		agm_admin_settings();
+
+		update_option( 'nextcloud_api_password', '' );
+
+		$this->assertSame( 'admin-password', get_option( 'nextcloud_api_password' ) );
+	}
+
+	public function test_saves_a_new_password_typed_in_the_field() {
+		agm_admin_settings();
+
+		update_option( 'nextcloud_api_password', 'a-new-password' );
+
+		$this->assertSame( 'a-new-password', get_option( 'nextcloud_api_password' ) );
+	}
+
+	public function test_warns_on_the_settings_page_when_the_host_does_not_use_https() {
+		update_option( 'nextcloud_api_host', 'http://nextcloud.example.org' );
+
+		$this->assertStringContainsString( 'O host do Nextcloud não usa HTTPS', $this->render_settings_page() );
+	}
+
+	public function test_does_not_warn_when_the_host_uses_https() {
+		update_option( 'nextcloud_api_host', 'https://nextcloud.example.org' );
+
+		$this->assertStringNotContainsString( 'O host do Nextcloud não usa HTTPS', $this->render_settings_page() );
+	}
+
+	private function render_settings_page() {
+		ob_start();
+		agm_nextcloud_config_page();
+
+		return (string) ob_get_clean();
+	}
 }

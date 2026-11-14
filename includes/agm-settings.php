@@ -19,6 +19,9 @@ function agm_nextcloud_config_page() {
         <form method="post" action="options.php">
             <?php
             settings_errors('nextcloud_api_connection');
+            if (!agm_nextcloud_host_uses_https()) {
+                echo '<div class="notice notice-warning inline"><p>O host do Nextcloud não usa HTTPS: a senha do administrador do Nextcloud e as senhas dos clientes trafegam sem criptografia.</p></div>';
+            }
             settings_fields('nextcloud_options_group');
             do_settings_sections('nextcloud-admin-group-manager');
             ?>
@@ -33,7 +36,7 @@ function agm_nextcloud_config_page() {
                 </tr>
                 <tr valign="top">
                     <th scope="row">Nextcloud api password</th>
-                    <td><input type="password" name="nextcloud_api_password" value="<?php echo esc_attr(get_option('nextcloud_api_password')); ?>" /></td>
+                    <td><input type="password" name="nextcloud_api_password" value="" autocomplete="new-password" placeholder="Deixe em branco para manter a senha salva" /></td>
                 </tr>
             </table>
             <?php submit_button(); ?>
@@ -57,7 +60,17 @@ add_action('admin_menu', 'agm_admin_group_manager_menu');
 function agm_admin_settings() {
     register_setting('nextcloud_options_group', 'nextcloud_api_host');
     register_setting('nextcloud_options_group', 'nextcloud_api_login');
-    register_setting('nextcloud_options_group', 'nextcloud_api_password');
+    register_setting('nextcloud_options_group', 'nextcloud_api_password', ['sanitize_callback' => 'agm_keep_saved_password_when_empty']);
+}
+
+function agm_keep_saved_password_when_empty($password): string {
+    $password = (string) $password;
+
+    return '' === $password ? (string) get_option('nextcloud_api_password') : $password;
+}
+
+function agm_nextcloud_host_uses_https(): bool {
+    return 'https' === wp_parse_url(trim((string) get_option('nextcloud_api_host')), PHP_URL_SCHEME);
 }
 
 add_action('admin_init', 'agm_admin_settings');
