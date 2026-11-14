@@ -8,6 +8,10 @@ wp plugin activate woocommerce woocommerce-subscriptions woocommerce-nextcloud-a
 wp option update woocommerce_coming_soon no
 wp option update woocommerce_default_country BR:SP
 wp option update woocommerce_currency BRL
+wp option update woocommerce_enable_guest_checkout no
+wp option update woocommerce_enable_signup_and_login_from_checkout yes
+wp option update woocommerce_registration_generate_username yes
+wp option update woocommerce_registration_generate_password yes
 wp option update nextcloud_api_host http://nextcloud
 wp option update nextcloud_api_login admin
 wp option update nextcloud_api_password admin-password

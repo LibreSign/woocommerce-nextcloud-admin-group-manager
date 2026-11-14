@@ -38,7 +38,7 @@ final class OrderFactory {
 
 		$order = wc_create_order(
 			array(
-				'customer_id' => isset( $overrides['customer_id'] ) ? $overrides['customer_id'] : 0,
+				'customer_id' => isset( $overrides['customer_id'] ) ? $overrides['customer_id'] : $this->customer(),
 				'status'      => isset( $overrides['status'] ) ? $overrides['status'] : 'pending',
 			)
 		);
@@ -49,6 +49,12 @@ final class OrderFactory {
 		$order->save();
 
 		return $order;
+	}
+
+	private function customer() {
+		$login = uniqid( 'customer-' );
+
+		return wp_create_user( $login, 'a-password', $login . '@example.org' );
 	}
 
 	private function build_attributes( $attributes ) {

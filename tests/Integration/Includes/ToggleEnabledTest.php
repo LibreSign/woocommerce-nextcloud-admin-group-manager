@@ -53,23 +53,13 @@ final class ToggleEnabledTest extends WP_UnitTestCase {
 		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 
-	public function test_disables_the_guest_account_under_the_billing_email_it_was_created_with() {
-		$order = $this->orders->order( array( 'billing' => array( 'email' => 'guest@example.org' ) ) );
-
-		( new Agm_ToggleEnabled() )->disable( $order->get_id() );
-
-		$this->assertSame( array( self::ENDPOINT ), $this->nextcloud->paths() );
-		$this->assertSame(
+	public function test_leaves_nextcloud_alone_for_a_guest_order() {
+		$order = $this->orders->order(
 			array(
-				'groupid' => 'guest@example.org',
-				'enabled' => '0',
-			),
-			$this->nextcloud->request()->getParsedInput()
+				'customer_id' => 0,
+				'billing'     => array( 'email' => 'guest@example.org' ),
+			)
 		);
-	}
-
-	public function test_leaves_nextcloud_alone_when_the_order_names_nobody() {
-		$order = $this->orders->order( array( 'billing' => array( 'email' => '' ) ) );
 
 		( new Agm_ToggleEnabled() )->disable( $order->get_id() );
 

@@ -1,8 +1,6 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-use LibreSign\WooNextcloud\AdminGroup;
-
 class Agm_ToggleEnabled
 {
     public function disable($order_id)
@@ -17,8 +15,7 @@ class Agm_ToggleEnabled
             return;
         }
         $user = $order->get_user();
-        $groupid = AdminGroup::id($user ? $user->user_login : null, $order->get_billing_email());
-        if (!$groupid) {
+        if (!$user) {
             return;
         }
         agm_nextcloud_request(
@@ -26,7 +23,7 @@ class Agm_ToggleEnabled
             '/ocs/v2.php/apps/admin_group_manager/api/v1/users-of-group/set-enabled',
             [
                 'body' => [
-                    'groupid' => $groupid,
+                    'groupid' => $user->user_login,
                     'enabled' => $enabled,
                 ],
             ]
