@@ -12,6 +12,7 @@ class Agm_StatusProcessing
     private const SYNC_META_LAST_ERROR = '_agm_nextcloud_sync_last_error';
     private const SYNC_STATUS_PENDING = 'pending';
     public const SYNC_STATUS_SUCCESS = 'success';
+    public const CUSTOMER_META_PROVISIONED = '_agm_nextcloud_provisioned';
     private const SYNC_STATUS_FAILED = 'failed';
     private const SYNC_STATUS_DISABLED = 'disabled';
     private const RETRY_HOOK = 'agm_retry_nextcloud_sync';
@@ -154,12 +155,20 @@ class Agm_StatusProcessing
 
         if ($response->succeeded()) {
             $this->mark_sync_success($order, $manual);
+            $this->mark_customer_provisioned($order);
             $order->set_status( 'completed', '', true );
             $order->save();
             return;
         }
 
         $message = $response->failure_message();
+        if (409 === $response->status) {
+            $this->mark_sync_failure($order, $message, $manual, false);
+            $this->clear_retry_schedule($order_id);
+            $order->add_order_note('Nextcloud refused to provision this order because an account with the same identifier already exists and does not belong to this customer. No retry was scheduled: resolve the conflict on Nextcloud before retrying the sync.');
+            return;
+        }
+
         $retry_at = RetryPolicy::next_retry_at($attempt, time());
         $this->mark_sync_failure($order, $message, $manual, null !== $retry_at);
         if (null !== $retry_at) {
@@ -250,6 +259,14 @@ class Agm_StatusProcessing
                 ? 'Nextcloud sync completed successfully after manual retry.'
                 : 'Nextcloud sync completed successfully.'
         );
+    }
+
+    private function mark_customer_provisioned(WC_Order $order): void
+    {
+        $customer_id = $order->get_customer_id();
+        if ($customer_id > 0) {
+            update_user_meta($customer_id, self::CUSTOMER_META_PROVISIONED, '1');
+        }
     }
 
     private function mark_sync_failure(WC_Order $order, string $message, bool $manual, bool $scheduled_retry): void

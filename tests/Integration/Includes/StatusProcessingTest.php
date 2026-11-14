@@ -111,6 +111,44 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 		$this->assertContains( 'Nextcloud sync completed successfully.', $this->notes_of( $order ) );
 	}
 
+	public function test_marks_the_customer_as_provisioned_when_nextcloud_accepts_the_order() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+		$user_id = self::factory()->user->create();
+
+		$this->process( $this->orders->order( array( 'customer_id' => $user_id ) ) );
+
+		$this->assertSame( '1', get_user_meta( $user_id, '_agm_nextcloud_provisioned', true ) );
+	}
+
+	public function test_does_not_mark_the_customer_as_provisioned_when_nextcloud_refuses_the_order() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 500 ) );
+		$user_id = self::factory()->user->create();
+
+		$this->process( $this->orders->order( array( 'customer_id' => $user_id ) ) );
+
+		$this->assertSame( '', get_user_meta( $user_id, '_agm_nextcloud_provisioned', true ) );
+	}
+
+	public function test_does_not_retry_an_account_nextcloud_says_belongs_to_someone_else() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 409, 'Conflict' ) );
+		$user_id = self::factory()->user->create();
+
+		$order = $this->process( $this->orders->order( array( 'customer_id' => $user_id, 'status' => 'processing' ) ) );
+
+		$this->assertSame( 'processing', $order->get_status() );
+		$this->assertSame( 'failed', $order->get_meta( '_agm_nextcloud_sync_status', true ) );
+		$this->assertSame( 'HTTP 409: Conflict', $order->get_meta( '_agm_nextcloud_sync_last_error', true ) );
+		$this->assertFalse(
+			as_next_scheduled_action( self::RETRY_HOOK, array( 'order_id' => $order->get_id() ), self::RETRY_GROUP )
+		);
+		$this->assertContains( 'Nextcloud sync failed: HTTP 409: Conflict', $this->notes_of( $order ) );
+		$this->assertContains(
+			'Nextcloud refused to provision this order because an account with the same identifier already exists and does not belong to this customer. No retry was scheduled: resolve the conflict on Nextcloud before retrying the sync.',
+			$this->notes_of( $order )
+		);
+		$this->assertSame( '', get_user_meta( $user_id, '_agm_nextcloud_provisioned', true ) );
+	}
+
 	public function test_falls_back_to_the_billing_email_when_the_order_has_no_customer() {
 		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
 
