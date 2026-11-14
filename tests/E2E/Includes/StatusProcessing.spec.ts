@@ -10,7 +10,7 @@ test.describe( 'Provisioning the admin group of a paid order', () => {
 	} );
 
 	test( 'creates the admin group on Nextcloud and completes the order', async ( { page } ) => {
-		const orderId = await buyTheNextcloudPlan( page, 'guest@example.org' );
+		const orderId = await buyTheNextcloudPlan( page, 'customer@example.org' );
 
 		expect( await nextcloud.requests() ).toEqual( [
 			{
@@ -18,8 +18,8 @@ test.describe( 'Provisioning the admin group of a paid order', () => {
 				path: '/ocs/v2.php/apps/admin_group_manager/api/v1/admin-group',
 				authorization: nextcloud.authorization(),
 				body: {
-					groupid: 'guest@example.org',
-					email: 'guest@example.org',
+					groupid: 'customer@example.org',
+					email: 'customer@example.org',
 					displayname: 'Ana Lima',
 					quota: '1GB',
 					'apps[0]': 'libresign',

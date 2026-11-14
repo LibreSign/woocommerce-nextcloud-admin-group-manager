@@ -149,17 +149,6 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 		$this->assertSame( '', get_user_meta( $user_id, '_agm_nextcloud_provisioned', true ) );
 	}
 
-	public function test_falls_back_to_the_billing_email_when_the_order_has_no_customer() {
-		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
-
-		$this->process( $this->orders->order( array( 'billing' => array( 'email' => 'guest@example.org' ) ) ) );
-
-		$body = $this->nextcloud->request()->getParsedInput();
-
-		$this->assertSame( 'guest@example.org', $body['groupid'] );
-		$this->assertSame( 'guest@example.org', $body['email'] );
-	}
-
 	public function test_skips_an_order_already_synced() {
 		$order = $this->orders->order();
 		$order->update_meta_data( '_agm_nextcloud_sync_status', 'success' );
@@ -227,11 +216,16 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 			'Order has no product items',
 		);
 
-		yield 'a guest order with no billing email' => array(
+		yield 'a guest order' => array(
 			static function ( OrderFactory $orders ) {
-				return $orders->order( array( 'billing' => array( 'email' => '' ) ) );
+				return $orders->order(
+					array(
+						'customer_id' => 0,
+						'billing'     => array( 'email' => 'guest@example.org' ),
+					)
+				);
 			},
-			'Missing group identifier',
+			'Order has no customer',
 		);
 	}
 
@@ -343,6 +337,22 @@ final class StatusProcessingTest extends WP_UnitTestCase {
 
 		$this->assertSame( 'disabled', $order->get_meta( '_agm_nextcloud_sync_status', true ) );
 		$this->assertContains( 'Nextcloud account disabled successfully after manual retry.', $this->notes_of( $order ) );
+	}
+
+	public function test_leaves_nextcloud_alone_when_a_retry_disables_a_guest_order() {
+		$this->nextcloud->answer_with( NextcloudServer::response( 200 ) );
+		$order = $this->orders->order(
+			array(
+				'customer_id' => 0,
+				'status'      => 'on-hold',
+				'billing'     => array( 'email' => 'guest@example.org' ),
+			)
+		);
+
+		do_action( 'woocommerce_order_action_agm_retry_nextcloud_sync', $order );
+
+		$this->assertSame( array(), $this->nextcloud->paths() );
+		$this->assertSame( 'Order has no customer', wc_get_order( $order->get_id() )->get_meta( '_agm_nextcloud_sync_last_error', true ) );
 	}
 
 	public function test_provisions_an_order_that_goes_active_after_a_retry_disabled_it() {

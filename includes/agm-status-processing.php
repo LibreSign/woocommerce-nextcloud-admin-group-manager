@@ -192,11 +192,13 @@ class Agm_StatusProcessing
         }
 
         $user = $order->get_user();
+        if (!$user) {
+            throw new RuntimeException('Order has no customer');
+        }
 
         return AdminGroup::payload(
-            $user ? $user->user_login : null,
-            $user ? $user->user_email : null,
-            $order->get_billing_email(),
+            $user->user_login,
+            $user->user_email,
             $order->get_billing_first_name(),
             $order->get_billing_last_name(),
             array_map(
