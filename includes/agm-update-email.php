@@ -9,15 +9,19 @@ class Agm_UpdateEmail
     /** @codeCoverageIgnore */
     public function __construct()
     {
-        add_action( 'profile_update', [ $this, 'sync_nextcloud_email' ] );
+        add_action( 'profile_update', [ $this, 'sync_nextcloud_email' ], 10, 2 );
         add_action( 'wp_set_password', [ $this, 'queue_nextcloud_password' ], 10, 3 );
         add_action( 'shutdown', [ $this, 'sync_pending_passwords' ] );
     }
 
-    public function sync_nextcloud_email( $user_id ): void
+    public function sync_nextcloud_email( $user_id, $old_user_data ): void
     {
         $user = get_userdata( $user_id );
-        if ( ! $user ) {
+        if ( ! $user || ! $old_user_data instanceof WP_User || $old_user_data->user_email === $user->user_email ) {
+            return;
+        }
+
+        if ( ! $this->is_provisioned( $user ) ) {
             return;
         }
 
@@ -54,6 +58,10 @@ class Agm_UpdateEmail
                 continue;
             }
 
+            if ( ! $this->is_provisioned( $user ) ) {
+                continue;
+            }
+
             agm_nextcloud_request(
                 'PUT',
                 '/ocs/v1.php/cloud/users/' . rawurlencode( $user->user_login ),
@@ -65,5 +73,29 @@ class Agm_UpdateEmail
                 ]
             );
         }
+    }
+
+    private function is_provisioned( WP_User $user ): bool
+    {
+        if ( '1' === get_user_meta( $user->ID, Agm_StatusProcessing::CUSTOMER_META_PROVISIONED, true ) ) {
+            return true;
+        }
+
+        $synced_orders = array_filter(
+            wc_get_orders(
+                [
+                    'customer_id' => $user->ID,
+                    'limit'       => -1,
+                ]
+            ),
+            static fn( WC_Order $order ): bool => Agm_StatusProcessing::SYNC_STATUS_SUCCESS === $order->get_meta( Agm_StatusProcessing::SYNC_META_STATUS, true )
+        );
+        if ( [] === $synced_orders ) {
+            return false;
+        }
+
+        update_user_meta( $user->ID, Agm_StatusProcessing::CUSTOMER_META_PROVISIONED, '1' );
+
+        return true;
     }
 }

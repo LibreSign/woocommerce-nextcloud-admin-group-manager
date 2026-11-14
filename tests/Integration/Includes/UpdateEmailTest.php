@@ -3,6 +3,7 @@
 namespace LibreSign\WooNextcloud\Tests\Integration\Includes;
 
 use LibreSign\WooNextcloud\Tests\Support\NextcloudServer;
+use LibreSign\WooNextcloud\Tests\Support\OrderFactory;
 use PasswordHash;
 use RuntimeException;
 use WC_Form_Handler;
@@ -43,6 +44,7 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 				'display_name' => 'Ana Lima',
 			)
 		);
+		update_user_meta( $this->user_id, '_agm_nextcloud_provisioned', '1' );
 		wp_set_current_user( $this->user_id );
 
 		$this->finish_request();
@@ -116,6 +118,7 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 				'user_pass'  => 'the-old-password',
 			)
 		);
+		update_user_meta( $user_id, '_agm_nextcloud_provisioned', '1' );
 		$this->finish_request();
 		$this->nextcloud->forget();
 
@@ -165,7 +168,69 @@ final class UpdateEmailTest extends WP_UnitTestCase {
 		$this->submit_wordpress_profile( '', '' );
 		$this->finish_request();
 
-		$this->assertSame( array( self::EMAIL_ENDPOINT ), $this->nextcloud->paths() );
+		$this->assertSame( array(), $this->nextcloud->paths() );
+	}
+
+	public function test_ignores_a_profile_saved_without_a_new_address() {
+		wp_update_user(
+			array(
+				'ID'         => $this->user_id,
+				'first_name' => 'Ana Maria',
+			)
+		);
+		$this->finish_request();
+
+		$this->assertSame( array(), $this->nextcloud->paths() );
+	}
+
+	public function test_ignores_the_address_of_a_user_nextcloud_was_not_provisioned_for() {
+		delete_user_meta( $this->user_id, '_agm_nextcloud_provisioned' );
+
+		wp_update_user(
+			array(
+				'ID'         => $this->user_id,
+				'user_email' => 'ana@libresign.coop',
+			)
+		);
+		$this->finish_request();
+
+		$this->assertSame( array(), $this->nextcloud->paths() );
+	}
+
+	public function test_ignores_the_password_of_a_user_nextcloud_was_not_provisioned_for() {
+		delete_user_meta( $this->user_id, '_agm_nextcloud_provisioned' );
+
+		reset_password( get_userdata( $this->user_id ), 'the-new-password' );
+		$this->finish_request();
+
+		$this->assertSame( array(), $this->nextcloud->paths() );
+	}
+
+	public function test_treats_a_customer_with_a_synced_order_as_provisioned() {
+		delete_user_meta( $this->user_id, '_agm_nextcloud_provisioned' );
+		$order = ( new OrderFactory() )->order( array( 'customer_id' => $this->user_id ) );
+		$order->update_meta_data( '_agm_nextcloud_sync_status', 'success' );
+		$order->save();
+		$this->nextcloud->forget();
+
+		reset_password( get_userdata( $this->user_id ), 'the-new-password' );
+		$this->finish_request();
+
+		$this->assert_sent_password( 'the-new-password' );
+		$this->assertSame( '1', get_user_meta( $this->user_id, '_agm_nextcloud_provisioned', true ) );
+	}
+
+	public function test_does_not_treat_a_customer_whose_order_was_never_synced_as_provisioned() {
+		delete_user_meta( $this->user_id, '_agm_nextcloud_provisioned' );
+		$order = ( new OrderFactory() )->order( array( 'customer_id' => $this->user_id ) );
+		$order->update_meta_data( '_agm_nextcloud_sync_status', 'failed' );
+		$order->save();
+		$this->nextcloud->forget();
+
+		reset_password( get_userdata( $this->user_id ), 'the-new-password' );
+		$this->finish_request();
+
+		$this->assertSame( array(), $this->nextcloud->paths() );
 	}
 
 	public function test_ignores_a_password_the_confirmation_does_not_match() {
